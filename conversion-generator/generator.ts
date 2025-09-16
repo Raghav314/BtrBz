@@ -58,6 +58,12 @@ const NAME_OVERRIDES: Record<string, string> = {
     ENCHANTMENT_ULTIMATE_JERRY_3: "Ultimate Jerry III",
     ENCHANTMENT_ULTIMATE_JERRY_4: "Ultimate Jerry IV",
     ENCHANTMENT_ULTIMATE_JERRY_5: "Ultimate Jerry V",
+
+    ENCHANTMENT_TRIPLE_STRIKE_5: "Triple-Strike V",
+    ENCHANTMENT_SYPHON_4: "Drain IV",
+    ENCHANTMENT_SYPHON_5: "Drain V",
+
+    ENCHANTMENT_DRAGON_HUNTER_6: "Gravity VI"
 };
 
 const GEM_SYMBOLS: Record<string, string> = {
@@ -106,7 +112,9 @@ function tryParseGemstoneId(id: string): string | undefined {
         console.error(`Unknown gem type "${type}" in id "${id}"`);
         return undefined;
     }
-    return `${symbol} ${rarityPart} ${type} Gemstone`;
+    return `${symbol} ${rarity} ${screamingSnakeCaseToTitleCase(
+        type!,
+    )} Gemstone`;
 }
 
 function screamingSnakeCaseToTitleCase(input: string): string {

@@ -3,7 +3,8 @@ plugins {
     java
 }
 
-fun getProp(name: String): String = findProperty(name) as? String ?: error("Missing Gradle property: $name")
+fun getProp(name: String): String =
+    findProperty(name) as? String ?: error("Missing Gradle property: $name")
 
 group = getProp("maven_group")
 version = getProp("mod_version")
@@ -16,6 +17,7 @@ repositories {
     mavenCentral()
     maven("https://maven.fabricmc.net/")
     maven("https://repo.hypixel.net/repository/Hypixel/")
+    maven("https://pkgs.dev.azure.com/djtheredstoner/DevAuth/_packaging/public/maven/v1")
 }
 
 fabricApi {
@@ -35,6 +37,8 @@ dependencies {
 
     implementation("io.vavr:vavr:0.10.7")
     implementation("com.google.code.gson:gson:2.8.9")
+
+    modRuntimeOnly("me.djtheredstoner:DevAuth-fabric:1.2.1")
 }
 
 tasks {

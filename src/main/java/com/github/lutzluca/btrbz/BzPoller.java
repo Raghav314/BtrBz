@@ -1,22 +1,22 @@
 package com.github.lutzluca.btrbz;
 
-import static com.github.lutzluca.btrbz.BtrBz.LOGGER;
-
 import com.github.lutzluca.btrbz.mixin.SkyBlockBazaarReplyAccessor;
-import com.google.gson.Gson;
 import io.vavr.control.Try;
-import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import net.hypixel.api.HypixelAPI;
 import net.hypixel.api.apache.ApacheHttpClient;
 import net.hypixel.api.reply.skyblock.SkyBlockBazaarReply;
 import net.hypixel.api.reply.skyblock.SkyBlockBazaarReply.Product;
+import net.minecraft.client.MinecraftClient;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * possible concurrency issues: this class uses a single-threaded ScheduledExecutorService for all operations, so all
@@ -27,9 +27,9 @@ public class BzPoller {
 
     /*
      * maybe on unchanged data use exponential backoff, starting at 100ms, doubling each time up a
-     * max as unchanged data should indicate that the bz has not been updated and should update
-     * soon (this should be the case most of the time, else the API is unable to respond
-     * with updated data). But this is good enough for "now".
+     * max as unchanged data should indicate that the bz has not been updated and should update soon
+     * (this should be the case most of the time, else the API is unable to respond with updated
+     * data). But this is good enough for "now".
      */
 
     private static final long BAZAAR_UPDATE_TIME_MS = 20_000;
@@ -39,8 +39,10 @@ public class BzPoller {
 
     private static final HypixelAPI API = new HypixelAPI(new ApacheHttpClient(getApiKey()));
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
-        r -> {
+    private final Consumer<Map<String, Product>> onReply;
+
+    private final ScheduledExecutorService scheduler =
+        Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "BazaarPoller-Thread");
             thread.setDaemon(true);
             return thread;
@@ -49,22 +51,18 @@ public class BzPoller {
     private long lastKnownUpdateTime = -1;
     private int unchangedDataRetries = 0;
 
-    public BzPoller() {
-        scheduleFetch(0, "Initial fetch");
+    public BzPoller(@NotNull Consumer<Map<String, Product>> onReply) {
+        this.onReply = Objects.requireNonNull(onReply);
+        this.scheduleFetch(0, "Initial fetch");
     }
 
     private static UUID getApiKey() {
-        return Optional.ofNullable(System.getenv("HYPIXEL_API_KEY"))
-                       .map(UUID::fromString)
+        return Optional.ofNullable(System.getenv("HYPIXEL_API_KEY")).map(UUID::fromString)
                        .orElseGet(UUID::randomUUID);
     }
 
     private void scheduleFetch(long delayMs, String reason) {
-        scheduler.schedule(() -> {
-                LOGGER.info("Executing bazaar fetch: {}", reason);
-                fetchBazaarData();
-            }, delayMs, TimeUnit.MILLISECONDS
-        );
+        this.scheduler.schedule(this::fetchBazaarData, delayMs, TimeUnit.MILLISECONDS);
     }
 
     private void fetchBazaarData() {
@@ -73,23 +71,23 @@ public class BzPoller {
            .whenCompleteAsync(
                (reply, throwable) -> {
                    if (throwable != null) {
-                       handleFetchError(throwable);
+                       this.handleFetchError(throwable);
                        return;
                    }
 
                    if (reply == null) {
-                       handleFetchError(new NullPointerException("Bazaar reply is null"));
+                       this.handleFetchError(new NullPointerException("Bazaar reply is null"));
                        return;
                    }
 
                    if (!reply.isSuccess()) {
-                       handleFetchError(new IllegalStateException("Bazaar reply unsuccessful"));
+                       this.handleFetchError(new IllegalStateException("Bazaar reply unsuccessful"));
                        return;
                    }
 
-                   processBazaarReply(reply);
+                   this.processBazaarReply(reply);
                },
-               scheduler
+               this.scheduler
            );
         // @formatter:on
     }
@@ -97,76 +95,69 @@ public class BzPoller {
     private void processBazaarReply(SkyBlockBazaarReply reply) {
         Try.of(() -> (SkyBlockBazaarReplyAccessor) reply).onSuccess((accessor) -> {
             long currentUpdateTime = accessor.getLastUpdated();
-            boolean changed = currentUpdateTime != lastKnownUpdateTime;
+            boolean changed = currentUpdateTime != this.lastKnownUpdateTime;
 
             if (changed) {
-                handleChangedData(currentUpdateTime, reply.getProducts());
+                this.handleChangedData(currentUpdateTime, reply.getProducts());
             } else {
-                handleUnchangedData();
+                this.handleUnchangedData();
             }
 
-            lastKnownUpdateTime = currentUpdateTime;
-            LOGGER.info("Bazaar data fetched successfully - Data {}, Last Updated: {}",
-                changed ? "changed" : "unchanged", Utils.formatUtcTimestampMillis(currentUpdateTime)
+            this.lastKnownUpdateTime = currentUpdateTime;
+            Notifier.logDebug("Bazaar data fetched successfully - Data {}, Last Updated: {}",
+                changed ? "changed" : "unchanged",
+                Utils.formatUtcTimestampMillis(currentUpdateTime)
             );
         }).onFailure(err -> {
-            LOGGER.error("Reply does not implement expected accessor", err);
-            scheduleFetch(ERROR_BACKOFF_MS, "Error recovery - SkyBlockBazaarReplyAccessor cast failed");
+            Notifier.logError("Reply does not implement expected accessor", err);
+            this.scheduleFetch(ERROR_BACKOFF_MS,
+                "Error recovery - SkyBlockBazaarReplyAccessor cast failed"
+            );
         });
     }
 
     private void handleChangedData(long currentUpdateTime, Map<String, Product> products) {
-        unchangedDataRetries = 0;
+        this.unchangedDataRetries = 0;
 
-        if (lastKnownUpdateTime != -1) {
-            long diffMs = currentUpdateTime - lastKnownUpdateTime;
-            LOGGER.info("Bazaar data updated after {} seconds", diffMs / 1000.0);
+        if (this.lastKnownUpdateTime != -1) {
+            long diffMs = currentUpdateTime - this.lastKnownUpdateTime;
+            Notifier.logDebug("Bazaar data updated after {} seconds", diffMs / 1000.0);
         }
 
-        // TODO: do something meaningful here
-        Try.of(() -> {
-               var gson = new Gson();
-               return gson.toJson(products);
-           })
-           .onSuccess(json ->
-               Utils.atomicDumpToFile(
-                        Path.of(System.getProperty("user.dir")).resolve("data.json").toString(),
-                        json
-                    )
-                    .onSuccess(path -> LOGGER.info("Dumped bazaar data to {}", path))
-                    .onFailure(err -> LOGGER.error("Failed to write bazaar data to file", err))
-           )
-           .onFailure(err -> LOGGER.error("Failed to process product data", err));
+        Optional.ofNullable(MinecraftClient.getInstance())
+                .ifPresent(client -> client.execute(() -> onReply.accept(products)));
 
         long jitter = ThreadLocalRandom.current().nextLong(200, 400);
-        scheduleFetch(BAZAAR_UPDATE_TIME_MS + jitter, "Regular interval fetch");
+        this.scheduleFetch(BAZAAR_UPDATE_TIME_MS + jitter, "Regular interval fetch");
     }
 
     private void handleUnchangedData() {
-        unchangedDataRetries++;
+        this.unchangedDataRetries++;
 
-        if (unchangedDataRetries <= MAX_UNCHANGED_RETRIES) {
-            LOGGER.info("Data unchanged (attempt {}/{}), retrying in {}ms", unchangedDataRetries,
-                MAX_UNCHANGED_RETRIES, UNCHANGED_DATA_BACKOFF_MS
+        if (this.unchangedDataRetries <= MAX_UNCHANGED_RETRIES) {
+            Notifier.logInfo("Data unchanged (attempt {}/{}), retrying in {}ms",
+                this.unchangedDataRetries, MAX_UNCHANGED_RETRIES, UNCHANGED_DATA_BACKOFF_MS
             );
 
-            scheduleFetch(UNCHANGED_DATA_BACKOFF_MS,
-                String.format("Unchanged data retry #%d", unchangedDataRetries)
+            this.scheduleFetch(UNCHANGED_DATA_BACKOFF_MS,
+                String.format("Unchanged data retry #%d", this.unchangedDataRetries)
             );
         } else {
-            LOGGER.warn("Bazaar data has been unchanged for {} consecutive attempts. "
+            Notifier.logWarn("Bazaar data has been unchanged for {} consecutive attempts. "
                     + "Reverting to normal polling interval. This may indicate an API issue.",
                 MAX_UNCHANGED_RETRIES
             );
 
-            unchangedDataRetries = 0;
+            this.unchangedDataRetries = 0;
             long jitter = ThreadLocalRandom.current().nextLong(200, 400);
-            scheduleFetch(BAZAAR_UPDATE_TIME_MS + jitter, "Post-unchanged-limit normal fetch");
+            this.scheduleFetch(BAZAAR_UPDATE_TIME_MS + jitter, "Post-unchanged-limit normal fetch");
         }
     }
 
     private void handleFetchError(Throwable throwable) {
-        LOGGER.warn("Error occurred while fetching bazaar data. Retrying in {}ms", ERROR_BACKOFF_MS, throwable);
-        scheduleFetch(ERROR_BACKOFF_MS, "Error recovery: API fetch error");
+        Notifier.logWarn("Error occurred while fetching bazaar data. Retrying in {}ms",
+            ERROR_BACKOFF_MS, throwable
+        );
+        this.scheduleFetch(ERROR_BACKOFF_MS, "Error recovery: API fetch error");
     }
 }
