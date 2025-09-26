@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Items;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 public class BtrBz implements ClientModInitializer {
 
@@ -58,19 +59,26 @@ public class BtrBz implements ClientModInitializer {
         // @formatter:on
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            String msg = message.getString();
+            // TODO: make this better, use something to decide which info to parse prior to parsing.
+            var msg = Formatting.strip(message.getString());
             if (!msg.startsWith("[Bazaar]")) {
                 return;
             }
 
-            var parsed = SetOrderInfo.parseSetupChat(msg);
-            if (parsed.isFailure()) {
-                System.out.println(
-                    "failed to parse out the setup chat order info: " + parsed.getCause());
+            var filledOrderInfos = OrderParser.parseFilledOrderInfo(msg);
+            if (filledOrderInfos.isSuccess()) {
+                manager.removeMatching(filledOrderInfos.get());
                 return;
             }
-            ChatOrder chatOrder = parsed.get();
-            System.out.println("parsed out chat order info: " + parsed.get());
+
+            var chatOrderTry = SetOrderInfo.parseSetupChat(msg);
+            if (chatOrderTry.isFailure()) {
+                System.out.println(
+                    "failed to parse out the setup chat order info: " + chatOrderTry.getCause());
+                return;
+            }
+            ChatOrder chatOrder = chatOrderTry.get();
+            System.out.println("parsed out chat order info: " + chatOrderTry.get());
 
             Optional<TrackedOrder> matched = OutstandingOrders.matchAndRemove(chatOrder);
             if (matched.isPresent()) {
