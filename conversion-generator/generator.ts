@@ -63,7 +63,13 @@ const NAME_OVERRIDES: Record<string, string> = {
     ENCHANTMENT_SYPHON_4: "Drain IV",
     ENCHANTMENT_SYPHON_5: "Drain V",
 
-    ENCHANTMENT_DRAGON_HUNTER_6: "Gravity VI"
+    ENCHANTMENT_DRAGON_HUNTER_6: "Gravity VI",
+    
+    ENCHANTMENT_PRISTINE_1: "Prismatic I",
+    ENCHANTMENT_PRISTINE_2: "Prismatic II",
+    ENCHANTMENT_PRISTINE_3: "Prismatic III",
+    ENCHANTMENT_PRISTINE_4: "Prismatic IV",
+    ENCHANTMENT_PRISTINE_5: "Prismatic V",
 };
 
 const GEM_SYMBOLS: Record<string, string> = {

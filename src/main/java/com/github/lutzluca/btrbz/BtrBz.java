@@ -7,7 +7,7 @@ import com.github.lutzluca.btrbz.data.ConversionLoader;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
 import com.github.lutzluca.btrbz.data.OrderModels.ChatOrderConfirmationInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.TrackedOrder;
-import com.github.lutzluca.btrbz.utils.InventoryLoadWatcher;
+import com.github.lutzluca.btrbz.utils.ScreenInfoHelper;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -55,20 +55,35 @@ public class BtrBz implements ClientModInitializer {
         new BazaarPoller(this.orderManager::onBazaarUpdate);
 
         // @formatter:off
-        new InventoryLoadWatcher(
-            (screen) -> screen.getTitle().getString().equals("Your Bazaar Orders"), (slots) -> {
-            final var FILTER = Set.of(Items.BLACK_STAINED_GLASS_PANE, Items.ARROW, Items.HOPPER);
+        var ignored = ScreenInfoHelper.registerOnLoaded(
+            info ->
+                info.containerName()
+                    .map(title -> title.equals("Your Bazaar Orders"))
+                    .orElse(false),
+            (info, slots) -> {
+                final var FILTER = Set.of(
+                    Items.BLACK_STAINED_GLASS_PANE,
+                    Items.ARROW,
+                    Items.HOPPER
+                );
 
-            var parsed = slots
-                .stream()
-                .filter(slot -> !(slot.stack().isEmpty() || FILTER.contains(slot.stack().getItem())))
-                .map(slot -> OrderInfoParser.parseOrderInfo(slot.stack(), slot.idx()).toJavaOptional())
-                .flatMap(Optional::stream)
-                .collect(Collectors.toList());
+                var parsed = slots.stream()
+                    .filter(slot -> {
+                        var stack = slot.stack();
+                        return !stack.isEmpty() && !FILTER.contains(stack.getItem());
+                    })
+                    .map(slot ->
+                        OrderInfoParser
+                            .parseOrderInfo(slot.stack(), slot.idx())
+                            .toJavaOptional()
+                    )
+                    .flatMap(Optional::stream)
+                    .collect(Collectors.toList());
 
-            this.orderManager.syncFromUi(parsed);
-            this.highlightManager.setStatuses(parsed);
-        });
+                this.orderManager.syncFromUi(parsed);
+                this.highlightManager.setStatuses(parsed);
+            }
+        );
         // @formatter:on
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {

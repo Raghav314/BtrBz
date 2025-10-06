@@ -64,8 +64,10 @@ public class BzOrderManager {
         }
 
         log.debug(
-            "Tracked orders: {}, toRemove: {}, toAdd: {}", this.trackedOrders.toString(),
-            toRemove.toString(), remaining.stream().filter(OrderInfo::notFilled).toList().toString()
+            "Tracked orders: {}, toRemove: {}, toAdd: {}",
+            this.trackedOrders,
+            toRemove,
+            remaining.stream().filter(OrderInfo::notFilled).toList()
         );
 
         this.trackedOrders.removeAll(toRemove);
@@ -92,7 +94,8 @@ public class BzOrderManager {
                 if (product.isEmpty()) {
                     log.warn(
                         "No product found for item with name '{}' and mapped id '{}'",
-                        tracked.productName, id.get()
+                        tracked.productName,
+                        id.get()
                     );
                     return Optional.<StatusUpdate>empty();
                 }
@@ -101,7 +104,8 @@ public class BzOrderManager {
                 if (status.isEmpty()) {
                     log.debug(
                         "Unable to determine status for product '{}' with id '{}'",
-                        tracked.productName, id.get()
+                        tracked.productName,
+                        id.get()
                     );
                     return Optional.<StatusUpdate>empty();
                 }
@@ -109,8 +113,7 @@ public class BzOrderManager {
                 return Optional.of(new StatusUpdate(tracked, status.get()));
             })
             .flatMap(Optional::stream)
-            .filter(
-                statusUpdate -> !statusUpdate.trackedOrder.status.sameVariant(statusUpdate.status))
+            .filter(statusUpdate -> !statusUpdate.trackedOrder.status.sameVariant(statusUpdate.status))
             .forEach(statusUpdate -> {
                 statusUpdate.trackedOrder.status = statusUpdate.status;
                 this.onOrderStatusUpdate.accept(statusUpdate);
@@ -137,8 +140,7 @@ public class BzOrderManager {
 
         this.trackedOrders
             .stream()
-            .filter(order -> order.productName.equals(
-                info.productName()) && order.type == info.type() && order.volume == info.volume())
+            .filter(order -> order.productName.equals(info.productName()) && order.type == info.type() && order.volume == info.volume())
             .sorted((t1, t2) -> orderingFactor * Double.compare(t1.pricePerUnit, t2.pricePerUnit))
             .findFirst()
             .ifPresentOrElse(
@@ -156,24 +158,21 @@ public class BzOrderManager {
     }
 
     public void confirmOutstanding(ChatOrderConfirmationInfo info) {
-        this.outstandingOrderStore
-            .removeMatching(info)
-            .map(TrackedOrder::new)
-            .ifPresentOrElse(
-                this::addTrackedOrder, () -> {
-                    log.info("Failed to find a matching outstanding order for: {}", info);
+        this.outstandingOrderStore.removeMatching(info).map(TrackedOrder::new).ifPresentOrElse(
+            this::addTrackedOrder, () -> {
+                log.info("Failed to find a matching outstanding order for: {}", info);
 
-                    Notifier.notifyChatCommand(
-                        String.format(
-                            "Failed to find a matching outstanding order for: %s for %sx %s totalling %s | click to resync tracked orders",
-                            info.type() == OrderType.Buy ? "Buy Order" : "Sell Offer",
-                            info.volume(),
-                            info.productName(),
-                            Util.formatDecimal(info.total(), 1)
-                        ), "managebazaarorders"
-                    );
-                }
-            );
+                Notifier.notifyChatCommand(
+                    String.format(
+                        "Failed to find a matching outstanding order for: %s for %sx %s totalling %s | click to resync tracked orders",
+                        info.type() == OrderType.Buy ? "Buy Order" : "Sell Offer",
+                        info.volume(),
+                        info.productName(),
+                        Util.formatDecimal(info.total(), 1)
+                    ), "managebazaarorders"
+                );
+            }
+        );
     }
 
     private Optional<OrderStatus> getStatus(TrackedOrder order, Product product) {
