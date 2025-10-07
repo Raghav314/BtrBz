@@ -47,7 +47,6 @@ public class InventoryLoadWatcher {
         int maxWaitTicks,
         boolean autoDisposeOnLoaded
     ) {
-
         this.watchedScreen = screen;
         this.onLoaded = onLoaded;
         this.loadingPredicate = loadingPredicate;
@@ -139,7 +138,6 @@ public class InventoryLoadWatcher {
     public void dispose() {
         stopTicking();
         unsubscribeSwitch.run();
-        reset();
     }
 
     public record SlotSnapshot(int idx, ItemStack stack) {
