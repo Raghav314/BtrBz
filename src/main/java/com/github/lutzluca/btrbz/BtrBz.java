@@ -7,7 +7,11 @@ import com.github.lutzluca.btrbz.data.ConversionLoader;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
 import com.github.lutzluca.btrbz.data.OrderModels.ChatOrderConfirmationInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.TrackedOrder;
+import com.github.lutzluca.btrbz.utils.ScreenActionManager;
+import com.github.lutzluca.btrbz.utils.ScreenActionManager.ScreenClickRule;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper;
+import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.BazaarMenuType;
+import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -18,6 +22,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.Items;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -56,10 +61,7 @@ public class BtrBz implements ClientModInitializer {
 
         // @formatter:off
         var ignored = ScreenInfoHelper.registerOnLoaded(
-            info ->
-                info.containerName()
-                    .map(title -> title.equals("Your Bazaar Orders"))
-                    .orElse(false),
+            info -> info.inMenu(BazaarMenuType.Orders),
             (info, slots) -> {
                 final var FILTER = Set.of(
                     Items.BLACK_STAINED_GLASS_PANE,
@@ -85,6 +87,34 @@ public class BtrBz implements ClientModInitializer {
             }
         );
         // @formatter:on
+
+        ScreenActionManager.register(new ScreenClickRule() {
+
+            @Override
+            public boolean applies(ScreenInfo info, Slot slot, int button) {
+                final int orderItemIdx = 13;
+
+                return info.inMenu(
+                    BazaarMenuType.BuyOrderConfirmation,
+                    BazaarMenuType.SellOfferConfirmation
+                ) && slot != null && slot.getIndex() == orderItemIdx;
+            }
+
+            @Override
+            public boolean onClick(ScreenInfo info, Slot slot, int button) {
+                OrderInfoParser.parseSetOrderItem(slot.getStack()).onSuccess((setOrderInfo) -> {
+                    BtrBz.orderManager().addOutstandingOrder(setOrderInfo);
+
+                    log.trace(
+                        "Stored outstanding order for {}x {}",
+                        setOrderInfo.volume(),
+                        setOrderInfo.productName()
+                    );
+                }).onFailure((err) -> log.warn("Failed to parse confirm item", err));
+
+                return false;
+            }
+        });
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             // TODO: make this better, use something to decide which info to parse prior to

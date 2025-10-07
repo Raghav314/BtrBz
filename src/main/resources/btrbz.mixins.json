@@ -4,8 +4,9 @@
     "compatibilityLevel": "JAVA_21",
     "client": [
         "HandledScreenMixin",
+        "MinecraftClientMixin",
         "SkyBlockBazaarReplyAccessor",
-        "MinecraftClientMixin"
+        "SlotMixin"
     ],
     "injectors": {
         "defaultRequire": 1

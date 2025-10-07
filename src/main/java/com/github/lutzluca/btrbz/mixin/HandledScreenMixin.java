@@ -1,7 +1,8 @@
 package com.github.lutzluca.btrbz.mixin;
 
 import com.github.lutzluca.btrbz.BtrBz;
-import com.github.lutzluca.btrbz.data.OrderInfoParser;
+import com.github.lutzluca.btrbz.utils.ScreenActionManager;
+import com.github.lutzluca.btrbz.utils.ScreenInfoHelper;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -29,7 +30,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
         // TODO use this
     }
 
-    @Inject(method = "onMouseClick(Lnet/minecraft/screen/slot/Slot;IILnet/minecraft/screen/slot/SlotActionType;)V", at = @At("HEAD"))
+    @Inject(method = "onMouseClick(Lnet/minecraft/screen/slot/Slot;IILnet/minecraft/screen/slot/SlotActionType;)V", at = @At("HEAD"), cancellable = true)
     private void onHandledMouseClick(
         Slot slot,
         int slotId,
@@ -37,37 +38,18 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
         SlotActionType actionType,
         CallbackInfo ci
     ) {
-        var client = MinecraftClient.getInstance();
-        if (!(client.currentScreen instanceof HandledScreen<?> screen)) {
-            return;
-        }
+        var cancelled = ScreenActionManager.handleClick(
+            ScreenInfoHelper.get().getCurrInfo(),
+            slot,
+            button
+        );
 
-        var title = screen.getTitle().getString();
-        if (!title.equals("Confirm Buy Order") && !title.equals("Confirm Sell Offer")) {
-            return;
-        }
-        if (slot == null || slot.getIndex() != 13) {
-            return;
-        }
-
-        OrderInfoParser.parseSetOrderItem(slot.getStack()).onSuccess((setOrderInfo) -> {
-            BtrBz.orderManager().addOutstandingOrder(setOrderInfo);
-            log.trace(
-                "Stored outstanding order for {}x {}",
-                setOrderInfo.volume(),
-                setOrderInfo.productName()
-            );
-        }).onFailure((err) -> log.warn("Failed to parse confirm item", err));
+        if (cancelled) { ci.cancel(); }
     }
 
     @Inject(method = "drawSlot", at = @At("TAIL"))
     private void afterDrawSlot(DrawContext context, Slot slot, CallbackInfo ci) {
-        var client = MinecraftClient.getInstance();
-        if (!(client.currentScreen instanceof HandledScreen<?> screen)) {
-            return;
-        }
-
-        if (!screen.getTitle().getString().equals("Your Bazaar Orders")) {
+        if (!ScreenInfoHelper.inMenu(ScreenInfoHelper.BazaarMenuType.Orders)) {
             return;
         }
         if (slot.getStack().isEmpty()) {
@@ -75,7 +57,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> extends Screen
         }
 
         var player = MinecraftClient.getInstance().player;
-        if (player != null && slot.inventory == player.getInventory()) {
+        if (player == null || slot.inventory == player.getInventory()) {
             return;
         }
 
