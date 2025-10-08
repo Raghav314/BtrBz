@@ -48,14 +48,14 @@ public final class Util {
         });
     }
 
-    public static String formatDecimal(double value, int places) {
+    public static String formatDecimal(double value, int places, boolean groupings) {
         if (places < 0) {
             throw new IllegalArgumentException("Decimal places must be non-negative");
         }
         NumberFormat formatter = NumberFormat.getNumberInstance(Locale.US);
         formatter.setMinimumFractionDigits(places);
         formatter.setMaximumFractionDigits(places);
-        formatter.setGroupingUsed(true);
+        formatter.setGroupingUsed(groupings);
 
         return formatter.format(value);
     }

@@ -38,8 +38,9 @@ public final class OrderInfoParser {
 
             var orderTypeResult = OrderType.tryFrom(orderInfo[0]);
             if (orderTypeResult.isFailure()) {
-                throw new IllegalArgumentException(
-                    "Failed to parse Order type: " + orderTypeResult.getCause().getMessage());
+                throw new IllegalArgumentException("Failed to parse Order type: " + orderTypeResult
+                    .getCause()
+                    .getMessage());
             }
 
             var productName = orderInfo[1];
@@ -54,8 +55,12 @@ public final class OrderInfoParser {
 
             var details = additionalInfo.get();
             return new OrderInfo(
-                productName.trim(), orderTypeResult.get(), details.volume(),
-                details.pricePerUnit(), details.filled(), slotIdx
+                productName.trim(),
+                orderTypeResult.get(),
+                details.volume(),
+                details.pricePerUnit(),
+                details.filled(),
+                slotIdx
             );
         });
     }
@@ -73,11 +78,13 @@ public final class OrderInfoParser {
                 }
 
                 if (pricePerUnit == null && line.startsWith("Price per unit:")) {
-                    var parsed = Util.parseUsFormattedNumber(
-                        line.replace("Price per unit:", "").replace("coins", "").trim());
+                    var parsed = Util.parseUsFormattedNumber(line
+                        .replace("Price per unit:", "")
+                        .replace("coins", "")
+                        .trim());
                     pricePerUnit = parsed
-                        .getOrElseThrow(
-                            () -> new IllegalArgumentException("Failed to parse pricePerUnit"))
+                        .getOrElseThrow(() -> new IllegalArgumentException(
+                            "Failed to parse pricePerUnit"))
                         .doubleValue();
                 } else if (volume == null && (line.startsWith("Order amount:") || line.startsWith(
                     "Offer amount:"))) {
@@ -87,8 +94,7 @@ public final class OrderInfoParser {
                         .replaceAll("x.*", "")
                         .trim());
                     volume = parsed
-                        .getOrElseThrow(
-                            () -> new IllegalArgumentException("Failed to parse volume"))
+                        .getOrElseThrow(() -> new IllegalArgumentException("Failed to parse volume"))
                         .intValue();
                 } else if (filled == null && line.startsWith("Filled") && line.contains("%")) {
                     filled = line.contains("100%");
@@ -143,11 +149,14 @@ public final class OrderInfoParser {
                 }
 
                 if (pricePerUnit == null && line.startsWith("Price per unit:")) {
-                    var parsed = Util.parseUsFormattedNumber(
-                        line.replace("Price per unit:", "").replace("coins", "").trim());
+                    var parsed = Util.parseUsFormattedNumber(line
+                        .replace("Price per unit:", "")
+                        .replace("coins", "")
+                        .trim());
                     if (parsed.isFailure()) {
-                        throw new IllegalArgumentException(
-                            "Failed to parse pricePerUnit: " + parsed.getCause().getMessage());
+                        throw new IllegalArgumentException("Failed to parse pricePerUnit: " + parsed
+                            .getCause()
+                            .getMessage());
                     }
                     pricePerUnit = parsed.get().doubleValue();
                 } else if (volume == null && (line.startsWith("Order:") || line.startsWith(
@@ -160,8 +169,9 @@ public final class OrderInfoParser {
                     var volStr = part.substring(0, xIdx).trim();
                     var parsed = Util.parseUsFormattedNumber(volStr);
                     if (parsed.isFailure()) {
-                        throw new IllegalArgumentException(
-                            "Failed to parse volume: " + parsed.getCause().getMessage());
+                        throw new IllegalArgumentException("Failed to parse volume: " + parsed
+                            .getCause()
+                            .getMessage());
                     }
                     volume = parsed.get().intValue();
                     productName = part.substring(xIdx + 1).trim();
@@ -173,8 +183,9 @@ public final class OrderInfoParser {
                         .replace("coins", "")
                         .trim());
                     if (parsed.isFailure()) {
-                        throw new IllegalArgumentException(
-                            "Failed to parse total: " + parsed.getCause().getMessage());
+                        throw new IllegalArgumentException("Failed to parse total: " + parsed
+                            .getCause()
+                            .getMessage());
                     }
                     total = parsed.get().doubleValue();
                 }
@@ -204,8 +215,8 @@ public final class OrderInfoParser {
             var type = switch (parts[0].trim()) {
                 case "Buy Order" -> OrderType.Buy;
                 case "Sell Offer" -> OrderType.Sell;
-                default -> throw new IllegalArgumentException(
-                    "Unexpected order type: '" + parts[0] + "', expected 'Buy Order Setup' or 'Sell Offer Setup'");
+                default ->
+                    throw new IllegalArgumentException("Unexpected order type: '" + parts[0] + "', expected 'Buy Order Setup' or 'Sell Offer Setup'");
             };
 
             var xIdx = parts[1].indexOf("x");
@@ -237,8 +248,8 @@ public final class OrderInfoParser {
             var type = switch (typeStr) {
                 case "Buy Order Setup" -> OrderType.Buy;
                 case "Sell Offer Setup" -> OrderType.Sell;
-                default -> throw new IllegalArgumentException(
-                    "Unexpected order type: '" + typeStr + "', expected 'Buy Order Setup' or 'Sell Offer Setup'");
+                default ->
+                    throw new IllegalArgumentException("Unexpected order type: '" + typeStr + "', expected 'Buy Order Setup' or 'Sell Offer Setup'");
             };
 
             var body = parts[1].trim();
@@ -271,7 +282,7 @@ public final class OrderInfoParser {
         });
     }
 
-    private static List<String> getLore(ItemStack item) {
+    public static List<String> getLore(ItemStack item) {
         return Optional
             .ofNullable(item.get(DataComponentTypes.LORE))
             .map(LoreComponent::lines)

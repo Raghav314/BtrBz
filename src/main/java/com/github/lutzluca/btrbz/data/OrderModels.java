@@ -96,8 +96,13 @@ public final class OrderModels {
                 case Sell -> "Sell Offer";
             };
 
-            return String.format("[%s] %s for %dx %s at %scoins per", status.toString(), typeStr,
-                volume, productName, Util.formatDecimal(pricePerUnit, 1)
+            return String.format(
+                "[%s] %s for %dx %s at %scoins per",
+                status.toString(),
+                typeStr,
+                volume,
+                productName,
+                Util.formatDecimal(pricePerUnit, 1, true)
             );
         }
     }
@@ -121,9 +126,10 @@ public final class OrderModels {
     ) {
 
         public boolean matches(ChatOrderConfirmationInfo chatOrder) {
-            return this.type == chatOrder.type && this.productName.equalsIgnoreCase(
-                chatOrder.productName) && this.volume == chatOrder.volume && Double.compare(
-                this.total, chatOrder.total) == 0;
+            return this.type == chatOrder.type && this.productName.equalsIgnoreCase(chatOrder.productName) && this.volume == chatOrder.volume && Double.compare(
+                this.total,
+                chatOrder.total
+            ) == 0;
         }
     }
 

@@ -1,6 +1,7 @@
 package com.github.lutzluca.btrbz;
 
 import com.github.lutzluca.btrbz.core.BzOrderManager;
+import com.github.lutzluca.btrbz.core.FlipHelper;
 import com.github.lutzluca.btrbz.core.HighlightManager;
 import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.data.BazaarPoller;
@@ -34,7 +35,6 @@ public class BtrBz implements ClientModInitializer {
     private static BtrBz instance;
     private BzOrderManager orderManager;
     private HighlightManager highlightManager;
-    private BazaarData bazaarData;
 
     public static BzOrderManager orderManager() {
         return instance.orderManager;
@@ -56,13 +56,17 @@ public class BtrBz implements ClientModInitializer {
                 err
             ));
 
+        BazaarData bazaarData = new BazaarData(conversions);
         this.highlightManager = new HighlightManager();
-        this.orderManager = new BzOrderManager(conversions, this.highlightManager::updateStatus);
+        this.orderManager = new BzOrderManager(
+            bazaarData,
+            this.highlightManager::updateStatus
+        );
+        bazaarData.addListener(this.orderManager::onBazaarUpdate);
 
-        this.bazaarData = new BazaarData();
-        this.bazaarData.addListener(this.orderManager::onBazaarUpdate);
+        new BazaarPoller(bazaarData::onUpdate);
 
-        new BazaarPoller(this.bazaarData::onUpdate);
+        FlipHelper.init(bazaarData);
 
         // @formatter:off
         ScreenInfoHelper.registerOnLoaded(
@@ -122,7 +126,7 @@ public class BtrBz implements ClientModInitializer {
         });
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            // TODO: make this better, use something to decide which info to parse prior to
+            // TODO: make this better, use something to decide which info to parse prior to 
             // parsing.
             var msg = Formatting.strip(message.getString());
             if (!msg.startsWith("[Bazaar]")) {

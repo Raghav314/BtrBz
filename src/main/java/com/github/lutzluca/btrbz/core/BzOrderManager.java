@@ -1,5 +1,6 @@
 package com.github.lutzluca.btrbz.core;
 
+import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.data.OrderModels.ChatFilledOrderInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.ChatOrderConfirmationInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.OrderInfo;
@@ -10,7 +11,6 @@ import com.github.lutzluca.btrbz.data.OrderModels.TrackedOrder;
 import com.github.lutzluca.btrbz.data.TimedStore;
 import com.github.lutzluca.btrbz.utils.Notifier;
 import com.github.lutzluca.btrbz.utils.Util;
-import com.google.common.collect.BiMap;
 import io.vavr.control.Try;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,18 +26,15 @@ import net.hypixel.api.reply.skyblock.SkyBlockBazaarReply.Product.Summary;
 @Slf4j
 public class BzOrderManager {
 
-    private final BiMap<String, String> idToName;
+    private final BazaarData bazaarData;
 
     private final List<TrackedOrder> trackedOrders = new ArrayList<>();
     private final TimedStore<OutstandingOrderInfo> outstandingOrderStore;
 
     private final Consumer<StatusUpdate> onOrderStatusUpdate;
 
-    public BzOrderManager(
-        BiMap<String, String> conversions,
-        Consumer<StatusUpdate> onOrderStatusChange
-    ) {
-        this.idToName = conversions;
+    public BzOrderManager(BazaarData bazaarData, Consumer<StatusUpdate> onOrderStatusChange) {
+        this.bazaarData = bazaarData;
         this.outstandingOrderStore = new TimedStore<>(15_000L);
         this.onOrderStatusUpdate = onOrderStatusChange;
     }
@@ -81,7 +78,7 @@ public class BzOrderManager {
         this.trackedOrders
             .stream()
             .map(tracked -> {
-                var id = nameToId(tracked.productName);
+                var id = bazaarData.nameToId(tracked.productName);
                 if (id.isEmpty()) {
                     log.warn(
                         "No name -> id mapping found for product with name: '{}'",
@@ -171,7 +168,7 @@ public class BzOrderManager {
                             info.type() == OrderType.Buy ? "Buy Order" : "Sell Offer",
                             info.volume(),
                             info.productName(),
-                            Util.formatDecimal(info.total(), 1)
+                            Util.formatDecimal(info.total(), 1, true)
                         ), "managebazaarorders"
                     );
                 }
@@ -209,10 +206,6 @@ public class BzOrderManager {
                 return new OrderStatus.Undercut(order.pricePerUnit - bestPrice);
             });
         };
-    }
-
-    private Optional<String> nameToId(String name) {
-        return Optional.ofNullable(this.idToName.inverse().get(name));
     }
 
     public record StatusUpdate(TrackedOrder trackedOrder, OrderStatus status) { }

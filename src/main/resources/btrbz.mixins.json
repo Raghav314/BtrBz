@@ -3,6 +3,7 @@
     "package": "com.github.lutzluca.btrbz.mixin",
     "compatibilityLevel": "JAVA_21",
     "client": [
+        "AbstractSignEditScreenAccessor",
         "HandledScreenMixin",
         "MinecraftClientMixin",
         "SkyBlockBazaarReplyAccessor",

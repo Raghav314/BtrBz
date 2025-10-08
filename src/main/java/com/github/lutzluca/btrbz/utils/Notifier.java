@@ -72,7 +72,9 @@ public class Notifier {
             .append(Text.literal("has been ").formatted(Formatting.WHITE))
             .append(Text.literal("UNDERCUT ").formatted(Formatting.RED))
             .append(Text.literal("by ").formatted(Formatting.WHITE))
-            .append(Text.literal(Util.formatDecimal(undercutAmount, 1)).formatted(Formatting.GOLD))
+            .append(Text
+                .literal(Util.formatDecimal(undercutAmount, 1, true))
+                .formatted(Formatting.GOLD))
             .append(Text.literal(" coins!").formatted(Formatting.WHITE));
 
         return fillBaseMessage(order.type, order.volume, order.productName, status);
