@@ -28,6 +28,8 @@ public final class ScreenInfoHelper {
 
     @Getter
     private volatile ScreenInfo currInfo = new ScreenInfo(null);
+    @Getter
+    private volatile ScreenInfo prevInfo = new ScreenInfo(null);
 
     private ScreenInfoHelper() { }
 
@@ -48,7 +50,6 @@ public final class ScreenInfoHelper {
         Predicate<ScreenInfo> matcher,
         BiConsumer<ScreenInfo, List<SlotSnapshot>> listener
     ) {
-
         var info = new ScreenLoadListenerEntry(matcher, listener);
         INSTANCE.screenLoadListenerEntries.add(info);
         return () -> INSTANCE.screenLoadListenerEntries.remove(info);
@@ -59,6 +60,7 @@ public final class ScreenInfoHelper {
         if (this.currInfo.equals(info)) {
             return;
         }
+        this.prevInfo = this.currInfo;
         this.currInfo = info;
 
         // @formatter:off

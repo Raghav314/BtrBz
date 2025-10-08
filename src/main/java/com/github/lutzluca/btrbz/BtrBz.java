@@ -2,6 +2,7 @@ package com.github.lutzluca.btrbz;
 
 import com.github.lutzluca.btrbz.core.BzOrderManager;
 import com.github.lutzluca.btrbz.core.HighlightManager;
+import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.data.BazaarPoller;
 import com.github.lutzluca.btrbz.data.ConversionLoader;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
@@ -33,6 +34,7 @@ public class BtrBz implements ClientModInitializer {
     private static BtrBz instance;
     private BzOrderManager orderManager;
     private HighlightManager highlightManager;
+    private BazaarData bazaarData;
 
     public static BzOrderManager orderManager() {
         return instance.orderManager;
@@ -57,10 +59,13 @@ public class BtrBz implements ClientModInitializer {
         this.highlightManager = new HighlightManager();
         this.orderManager = new BzOrderManager(conversions, this.highlightManager::updateStatus);
 
-        new BazaarPoller(this.orderManager::onBazaarUpdate);
+        this.bazaarData = new BazaarData();
+        this.bazaarData.addListener(this.orderManager::onBazaarUpdate);
+
+        new BazaarPoller(this.bazaarData::onUpdate);
 
         // @formatter:off
-        var ignored = ScreenInfoHelper.registerOnLoaded(
+        ScreenInfoHelper.registerOnLoaded(
             info -> info.inMenu(BazaarMenuType.Orders),
             (info, slots) -> {
                 final var FILTER = Set.of(
