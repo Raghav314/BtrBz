@@ -21,7 +21,6 @@ import io.vavr.control.Try;
 import java.util.Optional;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.SignEditScreen;
 import net.minecraft.component.DataComponentTypes;
@@ -124,16 +123,14 @@ public class FlipHelper {
                 return Optional.empty();
             }
 
-            var prod = clickedProductName;
-            if (slot == null || slot.getIndex() != customHelperSlot || prod == null) {
+            if (slot == null || slot.getIndex() != customHelperSlot || clickedProductName == null) {
                 return Optional.empty();
             }
 
             var lowestPrice = this.bazaarData
-                .nameToId(prod)
+                .nameToId(clickedProductName)
                 .flatMap(this.bazaarData::lowestSellPrice);
             if (lowestPrice.isEmpty()) {
-                log.debug("No lowestSellPrice for product {}", prod);
                 return Optional.empty();
             }
 
@@ -200,11 +197,9 @@ public class FlipHelper {
             }
         });
 
-        // TODO: use onSwitch here?
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            var curr = ScreenInfoHelper.get().getCurrInfo();
+        // does this introduce a race cond, as the SignEditScreen could not have been rendered?
+        ScreenInfoHelper.registerOnSwitch(curr -> {
             var prev = ScreenInfoHelper.get().getPrevInfo();
-
             if (prev == null || !prev.inMenu(BazaarMenuType.OrderOptions) || !pendingFlipClick) {
                 return;
             }
@@ -242,12 +237,15 @@ public class FlipHelper {
 
             Try.run(() -> {
                 signEditScreen.close();
-                client.setScreen(null);
+                var client = MinecraftClient.getInstance();
+                if (client != null) {
+                    client.setScreen(null);
+                }
                 pendingFlips.add(new FlipEntry(clickedProductName, flipPrice.get()));
-            }).onFailure(err -> log.warn("Failed to finalize sign edit", err)).onSuccess(v -> {
-                pendingFlipClick = false;
-                clickedProductName = null;
-            });
+            }).onFailure(err -> log.warn("Failed to finalize sign edit", err));
+
+            pendingFlipClick = false;
+            clickedProductName = null;
         });
     }
 
