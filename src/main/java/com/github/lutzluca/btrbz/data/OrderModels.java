@@ -138,4 +138,6 @@ public final class OrderModels {
     ) { }
 
     public record ChatFilledOrderInfo(String productName, OrderType type, int volume) { }
+
+    public record ChatFlippedOrderInfo(String productName, int volume) { }
 }

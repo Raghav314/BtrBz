@@ -1,6 +1,7 @@
 package com.github.lutzluca.btrbz.data;
 
 import com.github.lutzluca.btrbz.data.OrderModels.ChatFilledOrderInfo;
+import com.github.lutzluca.btrbz.data.OrderModels.ChatFlippedOrderInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.ChatOrderConfirmationInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.OrderInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.OrderType;
@@ -279,6 +280,52 @@ public final class OrderInfoParser {
                 .getOrElseThrow(() -> new IllegalArgumentException("Invalid total: " + totalStr));
 
             return new ChatOrderConfirmationInfo(productName, type, volume, total);
+        });
+    }
+
+    public static Try<ChatFlippedOrderInfo> parseFlippedOrderInfo(
+        String bazaarMsg
+    ) {
+        // [Bazaar] Order Flipped! {volume}x {productName} for {rounded total} of total expected
+        // profit.
+        return Try.of(() -> {
+            var msg = bazaarMsg.replace("[Bazaar]", "").trim();
+
+            var prefix = "Order Flipped!";
+            if (!msg.startsWith(prefix)) {
+                throw new IllegalArgumentException("Not an Order Flipped message");
+            }
+
+            var rest = msg.substring(prefix.length()).trim();
+
+            var parts = rest.split(" for ", 2);
+            if (parts.length != 2) {
+                throw new IllegalArgumentException("Unexpected flipped message format: " + bazaarMsg);
+            }
+
+            var left = parts[0].trim();
+
+            var xIdx = left.indexOf('x');
+            if (xIdx < 0) {
+                throw new IllegalArgumentException("Missing 'x' in flipped message: " + bazaarMsg);
+            }
+
+            var volumeStr = left.substring(0, xIdx).trim();
+            var productName = left.substring(xIdx + 1).trim();
+
+            var volume = Util
+                .parseUsFormattedNumber(volumeStr)
+                .map(Number::intValue)
+                .getOrElseThrow(err -> new IllegalArgumentException(
+                    "Invalid volume in flipped message: " + volumeStr,
+                    err
+                ));
+
+            if (productName.isEmpty()) {
+                throw new IllegalArgumentException("Missing product name in flipped message: " + bazaarMsg);
+            }
+
+            return new ChatFlippedOrderInfo(productName, volume);
         });
     }
 

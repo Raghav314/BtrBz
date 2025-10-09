@@ -1,14 +1,20 @@
 package com.github.lutzluca.btrbz.core;
 
+import com.github.lutzluca.btrbz.BtrBz;
 import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
+import com.github.lutzluca.btrbz.data.OrderModels.ChatFlippedOrderInfo;
+import com.github.lutzluca.btrbz.data.OrderModels.OrderInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.OrderType;
+import com.github.lutzluca.btrbz.data.OrderModels.TrackedOrder;
 import com.github.lutzluca.btrbz.data.TimedStore;
 import com.github.lutzluca.btrbz.mixin.AbstractSignEditScreenAccessor;
 import com.github.lutzluca.btrbz.utils.ItemOverrideManager;
+import com.github.lutzluca.btrbz.utils.Notifier;
 import com.github.lutzluca.btrbz.utils.ScreenActionManager;
 import com.github.lutzluca.btrbz.utils.ScreenActionManager.ScreenClickRule;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper;
+import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.BazaarMenuType;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 import com.github.lutzluca.btrbz.utils.Util;
 import io.vavr.control.Try;
@@ -27,22 +33,25 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
 
+// TODO: clear up this mess: I currently don't care at the horrendous mess this is
 @Slf4j
-public final class FlipHelper {
+public class FlipHelper {
 
-    private static final TimedStore<FlipEntry> pendingFlips = new TimedStore<>(15_000L);
     private static final int customHelperSlot = 16;
-    private static String clickedProductName = null;
+    private static final int flipOrderIdx = 15;
 
-    private FlipHelper() { }
+    private final TimedStore<FlipEntry> pendingFlips = new TimedStore<>(15_000L);
+    private final BazaarData bazaarData;
+    private String clickedProductName = null;
+    private boolean pendingFlipClick = false;
 
-    public static void init(BazaarData bazaarData) {
+    public FlipHelper(BazaarData bazaarData) {
+        this.bazaarData = bazaarData;
+
         ScreenActionManager.register(new ScreenClickRule() {
-
             @Override
             public boolean applies(ScreenInfo info, Slot slot, int button) {
                 if (slot == null || button != 1) {
-                    clickedProductName = null;
                     return false;
                 }
 
@@ -51,6 +60,7 @@ public final class FlipHelper {
 
             @Override
             public boolean onClick(ScreenInfo info, Slot slot, int button) {
+                // TODO: move the filter (same as the one used in BtrBz so a static field somewhere)
                 final var FILTER = Set.of(
                     Items.BLACK_STAINED_GLASS_PANE,
                     Items.ARROW,
@@ -60,7 +70,7 @@ public final class FlipHelper {
                 record OrderTitleInfo(OrderType type, String productName) { }
 
                 var itemStack = slot.getStack();
-                var orderInfo = Optional
+                var orderTitleInfo = Optional
                     .ofNullable(itemStack)
                     .filter(stack -> !stack.isEmpty() && !FILTER.contains(stack.getItem()))
                     .map(stack -> stack.getName().getString())
@@ -85,7 +95,8 @@ public final class FlipHelper {
                             .map(type -> new OrderTitleInfo(type, parts[1].trim()));
                     });
 
-                if (orderInfo.isEmpty() || orderInfo.get().type != OrderType.Buy) {
+                if (orderTitleInfo.isEmpty() || orderTitleInfo.get().type != OrderType.Buy) {
+                    clickedProductName = null;
                     return false;
                 }
 
@@ -98,10 +109,12 @@ public final class FlipHelper {
                     .orElse(false);
 
                 if (!isFilled) {
+                    clickedProductName = null;
                     return false;
                 }
 
-                clickedProductName = orderInfo.get().productName();
+                clickedProductName = orderTitleInfo.get().productName();
+                log.debug("Set pendingFlip for potential flip: {}", clickedProductName);
                 return false;
             }
         });
@@ -116,7 +129,9 @@ public final class FlipHelper {
                 return Optional.empty();
             }
 
-            var lowestPrice = bazaarData.nameToId(prod).flatMap(bazaarData::lowestSellPrice);
+            var lowestPrice = this.bazaarData
+                .nameToId(prod)
+                .flatMap(this.bazaarData::lowestSellPrice);
             if (lowestPrice.isEmpty()) {
                 log.debug("No lowestSellPrice for product {}", prod);
                 return Optional.empty();
@@ -138,12 +153,15 @@ public final class FlipHelper {
             @Override
             public boolean applies(ScreenInfo info, Slot slot, int button) {
                 return slot != null && slot.getIndex() == customHelperSlot && info.inMenu(
-                    ScreenInfoHelper.BazaarMenuType.OrderOptions);
+                    BazaarMenuType.OrderOptions);
             }
 
+            // TODO: clicking the `customHelperSlot` regardless if its replaced results in
+            // a click on the flip item; need to check if the item has a non empty
+            // sell summary. Maybe have the BazaarData return a custom struct which registers
+            // itself against the on update and store this struct instead of the productName.
             @Override
             public boolean onClick(ScreenInfo info, Slot slot, int button) {
-                final int flipOrderIdx = 15;
 
                 var client = MinecraftClient.getInstance();
                 if (client == null) {
@@ -173,32 +191,47 @@ public final class FlipHelper {
                         SlotActionType.PICKUP,
                         player
                     ))
-                    .onFailure(err -> log.warn("Failed to click flip order programmatically", err));
+                    .onFailure(err -> log.warn("Failed to 'click' flip order", err))
+                    .onSuccess(v -> {
+                        pendingFlipClick = true;
+                    });
 
                 return false;
             }
         });
 
+        // TODO: use onSwitch here?
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             var curr = ScreenInfoHelper.get().getCurrInfo();
             var prev = ScreenInfoHelper.get().getPrevInfo();
-            if (!(curr.getScreen() instanceof SignEditScreen signEditScreen) || prev == null || !prev.inMenu(
-                ScreenInfoHelper.BazaarMenuType.OrderOptions)) {
+
+            if (prev == null || !prev.inMenu(BazaarMenuType.OrderOptions) || !pendingFlipClick) {
+                return;
+            }
+
+            if (!(curr.getScreen() instanceof SignEditScreen signEditScreen)) {
+                pendingFlipClick = false;
+                clickedProductName = null;
+                log.trace(
+                    "Cleared pendingFlipClick due to screen transition from OrderOptions to a not SignEditScreen");
                 return;
             }
 
             if (clickedProductName == null) {
                 log.warn("Expected clickedProductName to be non-null");
+                pendingFlipClick = false;
                 return;
             }
 
-            var flipPrice = bazaarData
+            var flipPrice = this.bazaarData
                 .nameToId(clickedProductName)
-                .flatMap(bazaarData::lowestSellPrice)
+                .flatMap(this.bazaarData::lowestSellPrice)
                 .map(lowest -> lowest - 0.1);
 
             if (flipPrice.isEmpty()) {
                 log.warn("Could not resolve price for product {}", clickedProductName);
+                pendingFlipClick = false;
+                clickedProductName = null;
                 return;
             }
 
@@ -211,8 +244,53 @@ public final class FlipHelper {
                 signEditScreen.close();
                 client.setScreen(null);
                 pendingFlips.add(new FlipEntry(clickedProductName, flipPrice.get()));
-            }).onFailure(err -> log.warn("Failed to finalize sign edit", err));
+            }).onFailure(err -> log.warn("Failed to finalize sign edit", err)).onSuccess(v -> {
+                pendingFlipClick = false;
+                clickedProductName = null;
+            });
         });
+    }
+
+    public void handleFlipped(ChatFlippedOrderInfo flipped) {
+        var match = this.pendingFlips.removeIfMatching(entry -> entry
+            .productName()
+            .equalsIgnoreCase(flipped.productName()));
+
+        if (match.isEmpty()) {
+            // this may be not necessary as after entring the price in the sign, it opens the orders
+            // menu, might as well leave it atm.
+            log.warn(
+                "No matching pending flip for flipped order {}x {}. Orders may be out of sync",
+                flipped.volume(),
+                flipped.productName()
+            );
+            Notifier.notifyChatCommand(
+                "No matching pending flip found for flipped order. Click to resync tracked orders",
+                "managebazaarorders"
+            );
+            return;
+        }
+
+        var entry = match.get();
+        double pricePerUnit = entry.pricePerUnit();
+
+        var orderInfo = new OrderInfo(
+            flipped.productName(),
+            OrderType.Sell,
+            flipped.volume(),
+            pricePerUnit,
+            false,
+            -1
+        );
+
+        BtrBz.orderManager().addTrackedOrder(new TrackedOrder(orderInfo, -1));
+
+        log.debug(
+            "Added tracked Sell order from flipped chat: {}x {} at {} per unit",
+            flipped.volume(),
+            flipped.productName(),
+            Util.formatDecimal(pricePerUnit, 1, true)
+        );
     }
 
     private record FlipEntry(String productName, double pricePerUnit) { }

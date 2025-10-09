@@ -58,15 +58,12 @@ public class BtrBz implements ClientModInitializer {
 
         BazaarData bazaarData = new BazaarData(conversions);
         this.highlightManager = new HighlightManager();
-        this.orderManager = new BzOrderManager(
-            bazaarData,
-            this.highlightManager::updateStatus
-        );
+        this.orderManager = new BzOrderManager(bazaarData, this.highlightManager::updateStatus);
         bazaarData.addListener(this.orderManager::onBazaarUpdate);
 
         new BazaarPoller(bazaarData::onUpdate);
 
-        FlipHelper.init(bazaarData);
+        var flipHelper = new FlipHelper(bazaarData);
 
         // @formatter:off
         ScreenInfoHelper.registerOnLoaded(
@@ -126,10 +123,17 @@ public class BtrBz implements ClientModInitializer {
         });
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            // TODO: make this better, use something to decide which info to parse prior to 
+            // TODO: make this better, use something to decide which info to parse prior to
             // parsing.
             var msg = Formatting.strip(message.getString());
             if (!msg.startsWith("[Bazaar]")) {
+                return;
+            }
+            var flippedTry = OrderInfoParser.parseFlippedOrderInfo(msg);
+            if (flippedTry.isSuccess()) {
+                var flipped = flippedTry.get();
+                log.info("Parsed flipped order: {}x {}", flipped.volume(), flipped.productName());
+                flipHelper.handleFlipped(flipped);
                 return;
             }
 
