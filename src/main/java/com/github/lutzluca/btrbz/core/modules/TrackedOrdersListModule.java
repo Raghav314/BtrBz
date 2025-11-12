@@ -38,6 +38,7 @@ import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@Slf4j
 public class TrackedOrdersListModule extends Module<OrderListConfig> {
 
     private final TooltipCache tooltipCache = new TooltipCache();
@@ -159,9 +160,19 @@ public class TrackedOrdersListModule extends Module<OrderListConfig> {
             .setTopMargin(2)
             .setBottomPadding(2);
 
+        this.list.onDragEnd((self, pos) -> this.savePosition(pos));
+
         this.initializeList();
 
         return List.of(this.list);
+    }
+
+    private void savePosition(Position pos) {
+        log.debug("Saving new position for BookmarkedItemsModule: {}", pos);
+        this.updateConfig(cfg -> {
+            cfg.x = pos.x();
+            cfg.y = pos.y();
+        });
     }
 
     private Optional<Position> getWidgetPosition(ScreenInfo info) {
