@@ -4,7 +4,7 @@
     "version": "${mod_version}",
     "name": "BtrBz",
     "authors": [
-        "Me!"
+        "LutzLuca"
     ],
     "icon": "assets/btrbz/icon.png",
     "environment": "client",
