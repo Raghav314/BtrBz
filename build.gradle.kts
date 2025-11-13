@@ -1,13 +1,18 @@
 plugins {
     id("fabric-loom") version "1.11-SNAPSHOT"
+    id("me.modmuss50.mod-publish-plugin") version "1.1.0"
     java
 }
 
 fun getProp(name: String): String =
-    findProperty(name) as? String ?: error("Missing Gradle property: $name")
+    rootProject.findProperty(name) as? String ?: findProperty(name) as? String
+    ?: error("Missing Gradle property: $name")
+
+val releaseType = getProp("release_type")
+val versionSuffix = if (releaseType == "release") "" else "-$releaseType"
 
 group = getProp("maven_group")
-version = getProp("mod_version") + "+" + getProp("mc_version")
+version = "${getProp("mod_version")}$versionSuffix+${getProp("mc_version")}"
 
 base {
     archivesName.set(getProp("mod_id"))
@@ -21,7 +26,6 @@ loom {
         runDir = "../../run"
     }
 }
-
 
 repositories {
     mavenCentral()
@@ -88,4 +92,31 @@ tasks {
 
 java {
     withSourcesJar()
+}
+
+publishMods {
+    file.set(tasks.remapJar.get().archiveFile)
+    changelog.set(
+        rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText()
+            ?: "No changelog provided"
+    )
+    dryRun.set(true)
+
+    type.set(
+        when (releaseType) {
+            "alpha" -> ALPHA
+            "beta" -> BETA
+            else -> STABLE
+        }
+    )
+    modLoaders.add("fabric")
+
+    displayName.set("BtrBz v${getProp("mod_version")}$versionSuffix for ${stonecutter.current.version}")
+    version.set("${getProp("mod_version")}$versionSuffix+${stonecutter.current.version}")
+
+    github {
+        accessToken.set(System.getenv("GITHUB_TOKEN"))
+        repository.set(getProp("github_repo"))
+        commitish.set("master")
+    }
 }
