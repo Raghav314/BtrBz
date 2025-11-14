@@ -276,17 +276,27 @@ public class BookmarkModule extends Module<BookMarkConfig> {
         @Override
         protected void renderContent(DrawContext ctx, int mouseX, int mouseY, float delta) {
             var textRenderer = MinecraftClient.getInstance().textRenderer;
-            var matrices = ctx.getMatrices();
 
             int iconX = this.getX() + 4;
             int iconY = this.getY() + (this.height - 14) / 2;
-
-            matrices.push();
             float scale = 14f / 16f;
+
+            //? if >=1.21.6 {
+            /*var matrices = ctx.getMatrices();
+            matrices.pushMatrix();
+            matrices.translate(iconX, iconY);
+            matrices.scale(scale, scale);
+            ctx.drawItem(this.itemStack, 0, 0);
+            matrices.popMatrix();
+            *///?} else {
+
+            var matrices = ctx.getMatrices();
+            matrices.push();
             matrices.translate(iconX, iconY, 0);
             matrices.scale(scale, scale, 1.0f);
             ctx.drawItem(this.itemStack, 0, 0);
             matrices.pop();
+            //?}
 
             if (this.hovered) {
                 ctx.fill(
