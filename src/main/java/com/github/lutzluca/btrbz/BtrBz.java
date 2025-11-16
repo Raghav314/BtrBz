@@ -129,8 +129,7 @@ public class BtrBz implements ClientModInitializer {
                     return false;
                 }
 
-                var player = MinecraftClient.getInstance().player;
-                if (player != null && slot.inventory == player.getInventory()) {
+                if (GameUtils.isPlayerInventorySlot(slot)) {
                     return false;
                 }
 

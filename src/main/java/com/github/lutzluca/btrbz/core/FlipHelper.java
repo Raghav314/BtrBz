@@ -11,6 +11,7 @@ import com.github.lutzluca.btrbz.data.OrderModels.OrderType;
 import com.github.lutzluca.btrbz.data.OrderModels.TrackedOrder;
 import com.github.lutzluca.btrbz.data.TimedStore;
 import com.github.lutzluca.btrbz.mixin.AbstractSignEditScreenAccessor;
+import com.github.lutzluca.btrbz.utils.GameUtils;
 import com.github.lutzluca.btrbz.utils.ItemOverrideManager;
 import com.github.lutzluca.btrbz.utils.Notifier;
 import com.github.lutzluca.btrbz.utils.ScreenActionManager;
@@ -87,8 +88,7 @@ public class FlipHelper {
                 return Optional.empty();
             }
 
-            var player = MinecraftClient.getInstance().player;
-            if (player != null && slot.inventory == player.getInventory()) {
+            if (GameUtils.isPlayerInventorySlot(slot)) {
                 return Optional.empty();
             }
 

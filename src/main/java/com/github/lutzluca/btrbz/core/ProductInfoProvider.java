@@ -4,6 +4,7 @@ import com.github.lutzluca.btrbz.BtrBz;
 import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import com.github.lutzluca.btrbz.core.config.ConfigScreen;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
+import com.github.lutzluca.btrbz.utils.GameUtils;
 import com.github.lutzluca.btrbz.utils.ItemOverrideManager;
 import com.github.lutzluca.btrbz.utils.Notifier;
 import com.github.lutzluca.btrbz.utils.ScreenActionManager;
@@ -171,8 +172,7 @@ public final class ProductInfoProvider {
                 return Optional.empty();
             }
 
-            var player = MinecraftClient.getInstance().player;
-            if (player != null && slot.inventory == player.getInventory()) {
+            if (GameUtils.isPlayerInventorySlot(slot)) {
                 return Optional.empty();
             }
 
@@ -215,8 +215,7 @@ public final class ProductInfoProvider {
                     return false;
                 }
 
-                var player = MinecraftClient.getInstance().player;
-                if (player != null && slot.inventory == player.getInventory()) {
+                if (GameUtils.isPlayerInventorySlot(slot)) {
                     return false;
                 }
 

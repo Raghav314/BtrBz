@@ -11,7 +11,9 @@ import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.scoreboard.ScoreboardEntry;
 import net.minecraft.scoreboard.ScoreboardObjective;
 import net.minecraft.scoreboard.Team;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.text.Text;
+import org.jetbrains.annotations.Nullable;
 
 public final class GameUtils {
 
@@ -79,5 +81,14 @@ public final class GameUtils {
             }
         }
         return res;
+    }
+
+    public static boolean isPlayerInventorySlot(@Nullable Slot slot) {
+        if (slot == null) { return false; }
+        var client = MinecraftClient.getInstance();
+        var player = client.player;
+        if (player == null) { return false; }
+
+        return slot.inventory == player.getInventory();
     }
 }

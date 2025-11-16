@@ -63,9 +63,8 @@ public class BookmarkModule extends Module<BookMarkConfig> {
             if (slot.getIndex() != 13 || !info.inMenu(BazaarMenuType.Item)) {
                 return Optional.empty();
             }
-
-            var player = MinecraftClient.getInstance().player;
-            if (player == null || slot.inventory == player.getInventory()) {
+            
+            if (GameUtils.isPlayerInventorySlot(slot)) {
                 return Optional.empty();
             }
 
