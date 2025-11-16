@@ -64,6 +64,11 @@ public class BookmarkModule extends Module<BookMarkConfig> {
                 return Optional.empty();
             }
 
+            var player = MinecraftClient.getInstance().player;
+            if (player == null || slot.inventory == player.getInventory()) {
+                return Optional.empty();
+            }
+
             String productName = original.getName().getString();
             if (BtrBz.bazaarData().nameToId(productName).isEmpty()) {
                 return Optional.empty();
