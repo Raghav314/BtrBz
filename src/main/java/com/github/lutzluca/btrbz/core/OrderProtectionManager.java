@@ -3,6 +3,7 @@ package com.github.lutzluca.btrbz.core;
 import com.github.lutzluca.btrbz.BtrBz;
 import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import com.github.lutzluca.btrbz.core.config.ConfigScreen;
+import com.github.lutzluca.btrbz.core.config.ConfigScreen.OptionGrouping;
 import com.github.lutzluca.btrbz.data.BazaarData.OrderPriceInfo;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
 import com.github.lutzluca.btrbz.data.OrderModels.OutstandingOrderInfo;
@@ -15,10 +16,8 @@ import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 import com.github.lutzluca.btrbz.utils.Utils;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
-import dev.isxander.yacl3.api.OptionEventListener.Event;
 import dev.isxander.yacl3.api.OptionGroup;
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder;
-import java.util.List;
 import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.function.BiConsumer;
@@ -423,42 +422,24 @@ public class OrderProtectionManager {
         }
 
         public OptionGroup createGroup() {
-            var enabledBuilder = this.createEnabledOption();
-
-            var undercutPercentage = this.createBlockUndercutPercentageOption();
-            var sellOfferUndercut = this.createMaxSellOfferUndercutOption().build();
-            var buyOrderUndercut = this.createMaxBuyOrderUndercutOption().build();
-
-            undercutPercentage.addListener((option, event) -> {
-                if (event == Event.STATE_CHANGE) {
-                    boolean val = option.pendingValue();
-                    sellOfferUndercut.setAvailable(val);
-                    buyOrderUndercut.setAvailable(val);
-                }
-            });
-
-            var options = List.of(
-                this.createShowChatMessageOption().build(),
-                this.createBlockUndercutOfOpposingOption().build(),
-                undercutPercentage.build(),
-                sellOfferUndercut,
-                buyOrderUndercut
+            var undercutGroup = new OptionGrouping(this.createBlockUndercutPercentageOption()).addOptions(
+                this.createMaxSellOfferUndercutOption(),
+                this.createMaxBuyOrderUndercutOption()
             );
 
-            enabledBuilder.addListener((option, event) -> {
-                if (event == Event.STATE_CHANGE) {
-                    boolean val = option.pendingValue();
-                    options.forEach(opt -> opt.setAvailable(val));
-                }
-            });
+            var rootGroup = new OptionGrouping(this.createEnabledOption())
+                .addOptions(
+                    this.createShowChatMessageOption(),
+                    this.createBlockUndercutOfOpposingOption()
+                )
+                .addSubgroups(undercutGroup);
 
             return OptionGroup
                 .createBuilder()
                 .name(Text.literal("Order Protection"))
                 .description(OptionDescription.of(Text.literal(
                     "Settings that guard against creating orders with unsafe or unintended pricing")))
-                .option(enabledBuilder.build())
-                .options(options)
+                .options(rootGroup.build())
                 .collapsed(false)
                 .build();
         }
