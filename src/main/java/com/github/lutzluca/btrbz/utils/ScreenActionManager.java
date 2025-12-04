@@ -3,7 +3,7 @@ package com.github.lutzluca.btrbz.utils;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.world.inventory.Slot;
 
 public class ScreenActionManager {
 
@@ -14,6 +14,11 @@ public class ScreenActionManager {
     }
 
     public static boolean handleClick(ScreenInfo info, Slot slot, int button) {
+
+        if (slot == null) {
+            return false;
+        }
+
         for (ScreenClickRule rule : RULES) {
             if (rule.applies(info, slot, button)) {
                 return rule.onClick(info, slot, button);

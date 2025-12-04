@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
 // TODO add colapse/expand functionality
@@ -36,7 +38,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
     private int tooltipMouseX = 0;
     private int tooltipMouseY = 0;
 
-    public ScrollableListWidget(int x, int y, int width, int height, Text message, Screen parent) {
+    public ScrollableListWidget(int x, int y, int width, int height, Component message, Screen parent) {
         super(x, y, width, height, message, parent);
         this.setRenderBackground(false);
         this.setRenderBorder(false);
@@ -152,13 +154,18 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean drag) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.buttonInfo().button();
+
+
         if (this.isMouseOverTitleBar(mouseX, mouseY) && button == 0) {
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(event, drag);
         }
 
         if (!this.isMouseOverContent(mouseX, mouseY)) {
-            return super.mouseClicked(mouseX, mouseY, button);
+            return super.mouseClicked(event, drag);
         }
 
         int childIdx = this.getChildAtPosition(mouseX, mouseY);
@@ -166,7 +173,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         if (childIdx >= 0) {
             T child = children.get(childIdx);
 
-            if (button == 1 && Screen.hasControlDown()) {
+            if (button == 1 && Minecraft.getInstance().hasControlDown()) {
                 this.removeChild(childIdx);
                 return true;
             }
@@ -180,13 +187,18 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             }
         }
 
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, drag);
     }
 
+
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        int button = event.buttonInfo().button();
+        double mouseX = event.x();
+        double mouseY = event.y();
+
         if (button == 0 && this.draggedChild != null) {
-            boolean wasDragging = isDraggingChild;
+            boolean wasDragging = this.isDraggingChild;
 
             this.draggedChild = null;
             this.draggedChildOriginalIdx = -1;
@@ -202,22 +214,18 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             return true;
         }
 
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseDragged(
-        double mouseX,
-        double mouseY,
-        int button,
-        double deltaX,
-        double deltaY
-    ) {
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        double mouseY = event.y();
+
         if (this.draggedChild != null) {
             int dragDistance = Math.abs((int) mouseY - this.mouseDragStartY);
 
             if (!this.isDraggingChild && dragDistance > this.getDragThreshold()) {
-                isDraggingChild = true;
+                this.isDraggingChild = true;
             }
 
             if (this.isDraggingChild) {
@@ -237,8 +245,9 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             return true;
         }
 
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return super.mouseDragged(event, deltaX, deltaY);
     }
+
 
     @Override
     public boolean mouseScrolled(
@@ -263,7 +272,9 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        var keyCode = event.key();
+
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && this.draggedChild != null) {
             this.draggedChild = null;
             this.draggedChildOriginalIdx = -1;
@@ -271,7 +282,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             return true;
         }
 
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private boolean isMouseOverTitleBar(double mouseX, double mouseY) {
@@ -319,11 +330,11 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
     }
 
     @Override
-    protected void renderWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    protected void renderWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         this.renderCompleteWidget(ctx, mouseX, mouseY, delta);
     }
 
-    private void renderCompleteWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    private void renderCompleteWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         boolean isHovered = this.isMouseOver(mouseX, mouseY);
         boolean isDraggingWidget = this.isDragging();
 
@@ -337,7 +348,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         );
 
         int borderColor = isDraggingWidget ? 0xFFFF6B6B : (isHovered ? 0xFF606060 : 0xFF404040);
-        ctx.drawBorder(this.getX(), this.getY(), width, height, borderColor);
+        ctx.submitOutline(this.getX(), this.getY(), width, height, borderColor);
 
         this.renderTitleBar(ctx, isDraggingWidget, isHovered);
 
@@ -353,8 +364,8 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
 
         if (this.tooltipPendingChild != null && this.draggedChild == null) {
             var tooltip = this.tooltipPendingChild.getTooltipLines();
-            ctx.drawTooltip(
-                MinecraftClient.getInstance().textRenderer,
+            ctx.setComponentTooltipForNextFrame(
+                Minecraft.getInstance().font,
                 tooltip,
                 this.tooltipMouseX,
                 this.tooltipMouseY
@@ -362,7 +373,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         }
     }
 
-    private void renderTitleBar(DrawContext ctx, boolean isDraggingWidget, boolean isHovered) {
+    private void renderTitleBar(GuiGraphics ctx, boolean isDraggingWidget, boolean isHovered) {
         int separatorY = this.getY() + this.titleBarHeight;
         ctx.fill(
             this.getX() + 1,
@@ -372,18 +383,18 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             0x40FFFFFF
         );
 
-        var textRenderer = MinecraftClient.getInstance().textRenderer;
+        var textRenderer = Minecraft.getInstance().font;
         int textColor = isDraggingWidget ? 0xFFFFAAAA : 0xFFFFFFFF;
-        ctx.drawCenteredTextWithShadow(
+        ctx.drawCenteredString(
             textRenderer,
             this.getMessage(),
             this.getX() + this.width / 2,
-            this.getY() + (this.titleBarHeight - textRenderer.fontHeight) / 2,
+            this.getY() + (this.titleBarHeight - textRenderer.lineHeight) / 2,
             textColor
         );
     }
 
-    private void renderChildren(DrawContext context, int mouseX, int mouseY, float delta) {
+    private void renderChildren(GuiGraphics context, int mouseX, int mouseY, float delta) {
         int contentStartY = this.getY() + this.titleBarHeight + this.topMargin;
         int contentEndY = this.getY() + this.height - this.bottomPadding;
 
@@ -436,7 +447,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         return this.children.size() > this.maxVisibleChildren;
     }
 
-    private void renderScrollbar(DrawContext ctx) {
+    private void renderScrollbar(GuiGraphics ctx) {
         int contentStartY = this.getY() + this.titleBarHeight + this.topMargin;
         int contentHeight = this.height - this.titleBarHeight - this.topMargin - this.bottomPadding;
 
@@ -470,13 +481,13 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         );
     }
 
-    private void renderEmptyMessage(DrawContext context) {
+    private void renderEmptyMessage(GuiGraphics context) {
         int contentStartY = this.getY() + this.titleBarHeight + this.topMargin;
         int contentHeight = this.height - this.titleBarHeight - this.topMargin - this.bottomPadding;
 
-        context.drawCenteredTextWithShadow(
-            MinecraftClient.getInstance().textRenderer,
-            Text.literal("Empty"),
+        context.drawCenteredString(
+            Minecraft.getInstance().font,
+            Component.literal("Empty"),
             this.getX() + this.width / 2,
             contentStartY + contentHeight / 2 - 4,
             0xFF808080
