@@ -287,8 +287,8 @@ public class TrackedOrderManager {
         public boolean notifyMatched = true;
         public boolean notifyUndercut = true;
 
-        public Action gotoOnMatched = Action.Item;
-        public Action gotoOnUndercut = Action.Item;
+        public Action gotoOnMatched = Action.Order;
+        public Action gotoOnUndercut = Action.Order;
 
         public OptionGroup createGroup() {
             var notifyBestGroup = new OptionGrouping(this.createNotifyBestOption()).addOptions(this.createNotifyBestOnPriorityRegain());
@@ -303,7 +303,8 @@ public class TrackedOrderManager {
             return OptionGroup
                 .createBuilder()
                 .name(Component.literal("Order Notification"))
-                .description(OptionDescription.of(Component.literal("Tracked order notification settings")))
+                .description(OptionDescription.of(Component.literal(
+                    "Tracked order notification settings")))
                 .options(rootGroup.build())
                 .collapsed(false)
                 .build();
