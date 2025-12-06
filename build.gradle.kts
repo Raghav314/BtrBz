@@ -98,7 +98,7 @@ publishMods {
     dryRun.set(false)
 
     file = tasks.remapJar.get().archiveFile
-    changelog = rootProject.file("CHANGELOG.md").takeIf { it.exists() }?.readText()
+    changelog = rootProject.file("CHANGELOG_LATEST.md").takeIf { it.exists() }?.readText()
         ?: "No changelog provided"
 
     type = when (releaseType) {
