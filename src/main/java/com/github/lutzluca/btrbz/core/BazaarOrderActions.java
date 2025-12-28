@@ -21,7 +21,6 @@ import net.minecraft.world.inventory.Slot;
 @Slf4j
 public class BazaarOrderActions {
 
-    private static boolean shouldReopenOrders = false;
     private static boolean shouldReopenBazaar = false;
     private static Integer remainingOrderAmount = null;
 
@@ -35,7 +34,7 @@ public class BazaarOrderActions {
                     return false;
                 }
 
-                if (!cfg.reopenOrders && !cfg.copyRemaining) {
+                if (!cfg.copyRemaining) {
                     return false;
                 }
 
@@ -58,9 +57,6 @@ public class BazaarOrderActions {
                     GameUtils.copyIntToClipboard(remainingOrderAmount);
                     remainingOrderAmount = null;
                 }
-                if (cfg.reopenOrders) {
-                    shouldReopenOrders = true;
-                }
 
                 return false;
             }
@@ -81,11 +77,6 @@ public class BazaarOrderActions {
 
         ScreenInfoHelper.registerOnClose(
             info -> info.inMenu(BazaarMenuType.OrderOptions), info -> {
-                if (shouldReopenOrders) {
-                    GameUtils.runCommand("managebazaarorders");
-                }
-
-                shouldReopenOrders = false;
                 remainingOrderAmount = null;
             }
         );
@@ -122,7 +113,6 @@ public class BazaarOrderActions {
     public static class OrderActionsConfig {
 
         public boolean enabled = true;
-        public boolean reopenOrders = true;
         public boolean copyRemaining = false;
         public boolean reopenBazaar = false;
 
@@ -154,17 +144,6 @@ public class BazaarOrderActions {
                 .controller(ConfigScreen::createBooleanController);
         }
 
-        public Option.Builder<Boolean> createReopenOrdersOption() {
-            return Option
-                .<Boolean>createBuilder()
-                .name(Component.literal("Go back to Order Screen"))
-                .binding(true, () -> this.reopenOrders, enabled -> this.reopenOrders = enabled)
-                .description(OptionDescription.of(Component.literal(
-                    "Automatically opens the Bazaar order screen after cancelling an order")))
-                .controller(ConfigScreen::createBooleanController);
-        }
-
-
         public Option.Builder<Boolean> createEnabledOption() {
             return Option
                 .<Boolean>createBuilder()
@@ -177,7 +156,6 @@ public class BazaarOrderActions {
 
         public OptionGroup createGroup() {
             var rootGroup = new OptionGrouping(this.createEnabledOption()).addOptions(
-                this.createReopenOrdersOption(),
                 this.createCopyRemainingOption(),
                 this.createReopenBazaarOption()
             );
@@ -186,7 +164,7 @@ public class BazaarOrderActions {
                 .createBuilder()
                 .name(Component.literal("Order Cancel Actions"))
                 .description(OptionDescription.of(Component.literal(
-                    "Automatically return to the Orders screen after cancelling an order")))
+                    "Settings for actions after canceling an order")))
                 .options(rootGroup.build())
                 .collapsed(false)
                 .build();
