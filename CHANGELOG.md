@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.2-alpha] - 2025-12-28
+
+### Added
+
+- "Display everywhere" option for the bookmark module to show bookmarks throughout all Bazaar menus, not just item-specific screens
+
+### Changed
+
+- Updated build system and Gradle wrapper to support Minecraft 1.21.11 with new mappings and structures
+- Changed default binding for "In Bazaar" option in Tracked Orders List from `false` to `true`
+
+### Removed
+
+- Obsolete "Go back to Order Screen" feature from order cancel actions
+- Removed automatic order screen reopening after cancelling orders
+- Related configuration option `reopenOrders` from `OrderActionsConfig`
+
 ## [0.1.1-alpha] - 2025-12-06
 
 ### Added
