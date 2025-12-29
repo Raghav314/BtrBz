@@ -2,6 +2,7 @@ package com.github.lutzluca.btrbz.widgets;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import lombok.Getter;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -89,6 +90,35 @@ public class TextDisplayWidget extends DraggableWidget {
     }
 
     @Override
+    public boolean isMouseOver(double mouseX, double mouseY) {
+        double scaledWidth = this.width * this.scale;
+        double scaledHeight = this.height * this.scale;
+
+        return mouseX >= this.getX() && mouseX < this.getX() + scaledWidth && mouseY >= this.getY() && mouseY < this.getY() + scaledHeight;
+    }
+
+    @Override
+    protected void renderWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
+
+        this.scale = ConfigManager.get().widgetScale.guiScale;
+        ctx.pose().pushMatrix();
+        this.applyScaleTransform(ctx);
+
+        if (!this.isHovered()) {
+            this.wasHoveredLastFrame = false;
+        }
+
+        if (this.renderBackground) {
+            renderBackground(ctx, mouseX, mouseY, delta);
+        }
+        if (this.renderBorder) {
+            renderBorder(ctx, mouseX, mouseY, delta);
+        }
+        renderContent(ctx, mouseX, mouseY, delta);
+        ctx.pose().popMatrix();
+    }
+
+    @Override
     protected void renderBackground(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         if (!this.isDragging()) { return; }
 
@@ -105,9 +135,13 @@ public class TextDisplayWidget extends DraggableWidget {
     protected void renderBorder(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
         if (!this.isDragging()) { return; }
 
+        //Note: sumbitOutline does not scale the outline itself, so I scale the width/height here
+        //This is fixed in >=1.21.11
+        int outlineWidth = Math.round(this.width * this.scale);
+        int outlineHeight = Math.round(this.height * this.scale);
         int borderColor = 0xFFFFD700;
-        //$ outline_swap
-        ctx.submitOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
+        //$ outline_scaled_swap
+        ctx.submitOutline(this.getX(), this.getY(), outlineWidth, outlineHeight, borderColor);
     }
 
     @Override

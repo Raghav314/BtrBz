@@ -77,4 +77,7 @@ public class Config {
 
     @SerialEntry
     public OrderBookConfig orderBook = new OrderBookConfig();
+
+    @SerialEntry
+    public WidgetScaleConfig widgetScale = new WidgetScaleConfig();
 }

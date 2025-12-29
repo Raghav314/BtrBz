@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.Component;
 
 // TODO add colapse/expand functionality
 // This definitely needs some rework as everything is full of magic numbers (but lgtm)
+// The Scaling is a mess to understand, but it works for now, Until the widget system is reworked
 public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWidget {
 
     private final List<T> children = new ArrayList<>();
@@ -37,6 +39,9 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
     private T tooltipPendingChild = null;
     private int tooltipMouseX = 0;
     private int tooltipMouseY = 0;
+
+    private int unscaledMouseX = 0;
+    private int unscaledMouseY = 0;
 
     public ScrollableListWidget(int x, int y, int width, int height, Component message, Screen parent) {
         super(x, y, width, height, message, parent);
@@ -109,7 +114,6 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
 
         this.height = this.titleBarHeight + this.topMargin + contentHeight + this.bottomPadding;
     }
-
     public void addChild(T child) {
         this.children.add(child);
         this.clampScrollOffset();
@@ -170,19 +174,19 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean drag) {
-        double mouseX = event.x();
-        double mouseY = event.y();
+        double localMouseX = toLocalX(event.x());
+        double localMouseY = toLocalY(event.y());
         int button = event.buttonInfo().button();
 
-        if (this.isMouseOverTitleBar(mouseX, mouseY) && button == 0) {
+        if (this.isMouseOverTitleBar(localMouseX, localMouseY) && button == 0) {
             return super.mouseClicked(event, drag);
         }
 
-        if (!this.isMouseOverContent(mouseX, mouseY)) {
+        if (!this.isMouseOverContent(localMouseX, localMouseY)) {
             return super.mouseClicked(event, drag);
         }
 
-        int childIdx = this.getChildAtPosition(mouseX, mouseY);
+        int childIdx = this.getChildAtPosition(localMouseX, localMouseY);
 
         if (childIdx >= 0) {
             T child = children.get(childIdx);
@@ -195,7 +199,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             if (button == 0) {
                 this.draggedChild = child;
                 this.draggedChildOriginalIdx = childIdx;
-                this.mouseDragStartY = (int) mouseY;
+                this.mouseDragStartY = (int) localMouseY;
                 this.isDraggingChild = false;
                 return true;
             }
@@ -208,8 +212,8 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         int button = event.buttonInfo().button();
-        double mouseX = event.x();
-        double mouseY = event.y();
+        double localMouseX = toLocalX(event.x());
+        double localMouseY = toLocalY(event.y());
 
         if (button == 0 && this.draggedChild != null) {
             boolean wasDragging = this.isDraggingChild;
@@ -219,7 +223,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             this.isDraggingChild = false;
 
             if (!wasDragging && this.onChildClickCallback != null) {
-                int childIdx = this.getChildAtPosition(mouseX, mouseY);
+                int childIdx = this.getChildAtPosition(localMouseX, localMouseY);
                 if (childIdx >= 0) {
                     this.onChildClickCallback.accept(children.get(childIdx), childIdx);
                 }
@@ -233,17 +237,17 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
-        double mouseY = event.y();
+        double localMouseY = toLocalY(event.y());
 
         if (this.draggedChild != null) {
-            int dragDistance = Math.abs((int) mouseY - this.mouseDragStartY);
+            int dragDistance = Math.abs((int) localMouseY - this.mouseDragStartY);
 
             if (!this.isDraggingChild && dragDistance > this.getDragThreshold()) {
                 this.isDraggingChild = true;
             }
 
             if (this.isDraggingChild) {
-                int newIdx = this.calculateDropIndex((int) mouseY);
+                int newIdx = this.calculateDropIndex((int) localMouseY);
 
                 if (newIdx != this.draggedChildOriginalIdx && newIdx >= 0 && newIdx < this.children.size()) {
                     this.children.remove(this.draggedChildOriginalIdx);
@@ -276,13 +280,18 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             this.clampScrollOffset();
             return true;
         }
-
         return false;
     }
 
     @Override
     public boolean isMouseOver(double mouseX, double mouseY) {
-        return mouseX >= this.getX() && mouseX < this.getX() + this.width && mouseY >= this.getY() && mouseY < this.getY() + this.height;
+
+        //Passed coordinates are unscaled, need to account for scale
+        //Why? Because passing scaled coordinates with no size scale breaks the children's hover detection
+        double scaledWidth = this.width * this.scale;
+        double scaledHeight = this.height * this.scale;
+
+        return mouseX >= this.getX() && mouseX < this.getX() + scaledWidth && mouseY >= this.getY() && mouseY < this.getY() + scaledHeight;
     }
 
     @Override
@@ -297,19 +306,19 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         return super.keyPressed(event);
     }
 
-    private boolean isMouseOverTitleBar(double mouseX, double mouseY) {
-        return mouseX >= this.getX() && mouseX <= this.getX() + this.width && mouseY >= this.getY() && mouseY <= this.getY() + this.titleBarHeight;
+    private boolean isMouseOverTitleBar(double localMouseX, double mouseY) {
+        return localMouseX >= this.getX() && localMouseX <= this.getX() + this.width && mouseY >= this.getY() && mouseY <= this.getY() + this.titleBarHeight;
     }
 
-    private boolean isMouseOverContent(double mouseX, double mouseY) {
+    private boolean isMouseOverContent(double localMouseX, double mouseY) {
         int contentStartY = this.getY() + this.titleBarHeight + this.topMargin;
         int contentEndY = this.getY() + this.height - this.bottomPadding;
 
-        return mouseX >= this.getX() && mouseX <= this.getX() + this.width && mouseY >= contentStartY && mouseY <= contentEndY;
+        return localMouseX >= this.getX() && localMouseX <= this.getX() + this.width && mouseY >= contentStartY && mouseY <= contentEndY;
     }
 
-    private int getChildAtPosition(double mouseX, double mouseY) {
-        if (!this.isMouseOverContent(mouseX, mouseY)) {
+    private int getChildAtPosition(double localMouseX, double mouseY) {
+        if (!this.isMouseOverContent(localMouseX, mouseY)) {
             return -1;
         }
 
@@ -343,11 +352,23 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
 
     @Override
     protected void renderWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        this.renderCompleteWidget(ctx, mouseX, mouseY, delta);
+
+        this.scale = ConfigManager.get().widgetScale.guiScale;
+        this.unscaledMouseX = mouseX;
+        this.unscaledMouseY = mouseY;
+
+        int localMouseX = (int) (toLocalX(mouseX));
+        int localMouseY = (int) (toLocalY(mouseY));
+
+        ctx.pose().pushMatrix();
+        this.applyScaleTransform(ctx);
+        this.renderCompleteWidget(ctx, localMouseX, localMouseY, delta);
+
+        ctx.pose().popMatrix();
     }
 
-    private void renderCompleteWidget(GuiGraphics ctx, int mouseX, int mouseY, float delta) {
-        boolean isHovered = this.isMouseOver(mouseX, mouseY);
+    private void renderCompleteWidget(GuiGraphics ctx, int localMouseX, int localMouseY, float delta) {
+        boolean isHovered = this.isMouseOver(this.unscaledMouseX, this.unscaledMouseY);
         boolean isDraggingWidget = this.isDragging();
 
         int bgColor = isDraggingWidget ? 0xD0404040 : (isHovered ? 0xD0353535 : 0xD0282828);
@@ -359,16 +380,20 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             bgColor
         );
 
+        //Note: sumbitOutline does not scale the outline itself, so I scale the width/height here
+        //This is fixed in >=1.21.11
+        int outlineWidth =  Math.round(this.width * this.scale);
+        int outlineHeight = Math.round(this.height * this.scale);
         int borderColor = isDraggingWidget ? 0xFFFF6B6B : (isHovered ? 0xFF606060 : 0xFF404040);
-        //$ outline_swap
-        ctx.submitOutline(this.getX(), this.getY(), this.width, this.height, borderColor);
+        //$ outline_scaled_swap
+        ctx.submitOutline(this.getX(), this.getY(), outlineWidth, outlineHeight, borderColor);
 
         this.renderTitleBar(ctx, isDraggingWidget, isHovered);
 
         if (this.children.isEmpty()) {
             this.renderEmptyMessage(ctx);
         } else {
-            this.renderChildren(ctx, mouseX, mouseY, delta);
+            this.renderChildren(ctx, localMouseX, localMouseY, delta);
         }
 
         if (this.needsScrollbar()) {
@@ -412,16 +437,10 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         );
     }
 
-    private void renderChildren(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    private void renderChildren(GuiGraphics context, int localMouseX, int localMouseY, float delta) {
         int contentStartY = this.getY() + this.titleBarHeight + this.topMargin;
         int contentEndY = this.getY() + this.height - this.bottomPadding;
 
-        context.enableScissor(
-            this.getX() + 1,
-            contentStartY,
-            this.getX() + this.width - 1,
-            contentEndY
-        );
 
         this.tooltipPendingChild = null;
 
@@ -449,16 +468,15 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
                 );
             }
 
-            child.render(context, mouseX, mouseY, delta);
+            child.render(context, localMouseX, localMouseY, delta);
 
             if (child.shouldShowTooltip()) {
                 this.tooltipPendingChild = child;
-                this.tooltipMouseX = mouseX;
-                this.tooltipMouseY = mouseY;
+                this.tooltipMouseX = this.unscaledMouseX;
+                this.tooltipMouseY = this.unscaledMouseY;
             }
         }
 
-        context.disableScissor();
     }
 
     private boolean needsScrollbar() {

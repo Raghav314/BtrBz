@@ -33,12 +33,12 @@ public class DraggableWidget extends AbstractWidget {
     private int dragStartY;
     private int widgetStartX;
     private int widgetStartY;
-
     @Getter
     private int dragThreshold = 3;
 
-    private boolean renderBackground = true;
-    private boolean renderBorder = true;
+    protected boolean renderBackground = true;
+    protected boolean renderBorder = true;
+    protected float scale = 1.0f;
 
     @Getter
     private Supplier<List<Component>> tooltipSupplier = null;
@@ -46,7 +46,7 @@ public class DraggableWidget extends AbstractWidget {
     private final Duration TOOLTIP_DELAY = Duration.ofMillis(200);
 
     private long hoverStartTime = 0;
-    private boolean wasHoveredLastFrame = false;
+    protected boolean wasHoveredLastFrame = false;
 
     private Consumer<DraggableWidget> onClickCallback;
     private BiConsumer<DraggableWidget, Position> onDragEndCallback;
@@ -88,6 +88,20 @@ public class DraggableWidget extends AbstractWidget {
 
     public Position getPosition() {
         return new Position(this.getX(), this.getY());
+    }
+
+    protected double toLocalX(double mouseX) {
+        return (mouseX - this.getX()) / this.scale + this.getX();
+    }
+
+    protected double toLocalY(double mouseY) {
+        return (mouseY - this.getY()) / this.scale + this.getY();
+    }
+
+    protected void applyScaleTransform(GuiGraphics ctx) {
+        ctx.pose().translate((float)this.getX(), (float)this.getY());
+        ctx.pose().scale(this.scale, this.scale);
+        ctx.pose().translate(-(float)this.getX(), -(float)this.getY());
     }
 
     @Override

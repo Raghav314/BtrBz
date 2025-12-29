@@ -15,6 +15,11 @@ stonecutter {
         eval(current.version, ">=1.21.11") -> "ctx.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);"
         else -> "ctx.submitOutline(this.getX(), this.getY(), this.width, this.height, borderColor);"
     }
+
+    swaps["outline_scaled_swap"] = when {
+        eval(current.version, ">=1.21.11") -> "ctx.renderOutline(this.getX(), this.getY(), this.width, this.height, borderColor);"
+        else -> "ctx.submitOutline(this.getX(), this.getY(), outlineWidth, outlineHeight, borderColor);"
+    }
 }
 
 fun getProp(name: String): String =
