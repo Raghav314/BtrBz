@@ -268,10 +268,16 @@ public class StaticListWidget<T extends AbstractWidget> extends DraggableWidget 
         );
     }
 
-    private void renderChildren(GuiGraphics context, int localMouseX, int localMouseY, float delta) {
-        int contentStartY = this.getY() + TITLE_BAR_HEIGHT + TOP_MARGIN;
-        int contentEndY = this.getY() + this.height - BOTTOM_PADDING;
+    private void renderChildren(GuiGraphics ctx, int localMouseX, int localMouseY, float delta) {
+        int scissorStartY = this.getY() + TITLE_BAR_HEIGHT;
+        int scissorHeight = this.height - TITLE_BAR_HEIGHT - BOTTOM_PADDING;
 
+        ctx.enableScissor(
+            this.getX(),
+            scissorStartY,
+            this.getX() + this.width,
+            scissorStartY + scissorHeight
+        );
 
         T tooltipPendingChild = null;
         int tooltipMouseX = 0;
@@ -289,7 +295,7 @@ public class StaticListWidget<T extends AbstractWidget> extends DraggableWidget 
             child.setWidth(this.width - 6 - (this.needsScrollbar() ? 8 : 0));
             child.setHeight(CHILD_HEIGHT);
 
-            child.render(context, localMouseX, localMouseY, delta);
+            child.render(ctx, localMouseX, localMouseY, delta);
 
             if (child instanceof SimpleTextWidget stw && stw.shouldShowTooltip()) {
                 tooltipPendingChild = child;
@@ -298,11 +304,12 @@ public class StaticListWidget<T extends AbstractWidget> extends DraggableWidget 
             }
         }
 
+        ctx.disableScissor();
 
         if (tooltipPendingChild instanceof SimpleTextWidget stw) {
             var tooltip = stw.getTooltipLines();
             if (tooltip != null) {
-                context.setComponentTooltipForNextFrame(
+                ctx.setComponentTooltipForNextFrame(
                     Minecraft.getInstance().font,
                     tooltip,
                     tooltipMouseX,

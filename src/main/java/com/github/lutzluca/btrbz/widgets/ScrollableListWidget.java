@@ -437,10 +437,16 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
         );
     }
 
-    private void renderChildren(GuiGraphics context, int localMouseX, int localMouseY, float delta) {
-        int contentStartY = this.getY() + this.titleBarHeight + this.topMargin;
-        int contentEndY = this.getY() + this.height - this.bottomPadding;
+    private void renderChildren(GuiGraphics ctx, int localMouseX, int localMouseY, float delta) {
+        int scissorStartY = this.getY() + this.titleBarHeight;
+        int scissorHeight = this.height - this.titleBarHeight - this.bottomPadding;
 
+        ctx.enableScissor(
+            this.getX(),
+            scissorStartY,
+            this.getX() + this.width,
+            scissorStartY + scissorHeight
+        );
 
         this.tooltipPendingChild = null;
 
@@ -459,7 +465,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             boolean isBeingDragged = (child == this.draggedChild && this.isDraggingChild);
 
             if (isBeingDragged) {
-                context.fill(
+                ctx.fill(
                     child.getX() - 1,
                     child.getY() - 1,
                     child.getX() + child.getWidth() + 1,
@@ -468,7 +474,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
                 );
             }
 
-            child.render(context, localMouseX, localMouseY, delta);
+            child.render(ctx, localMouseX, localMouseY, delta);
 
             if (child.shouldShowTooltip()) {
                 this.tooltipPendingChild = child;
@@ -477,6 +483,7 @@ public class ScrollableListWidget<T extends DraggableWidget> extends DraggableWi
             }
         }
 
+        ctx.disableScissor();
     }
 
     private boolean needsScrollbar() {
