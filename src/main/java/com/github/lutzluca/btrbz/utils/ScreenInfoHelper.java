@@ -131,6 +131,8 @@ public final class ScreenInfoHelper {
         Main, // Bazaar ➜ <category> / "<search>"
         Orders, // Your Bazaar Orders or Co-op Bazaar Orders
         InstaBuy, // <product name> ➜ Instant Buy
+        InstaSellConfirmation, // Confirm Sell Offer
+        InstaBuyConfirmation, // Confirm Buy Order
         BuyOrderSetupPrice,  // How much do you want to pay?
         BuyOrderSetupVolume, // How many do you want?
         BuyOrderConfirmation, // Confirm Buy Order
@@ -170,7 +172,9 @@ public final class ScreenInfoHelper {
                     yield BazaarCategory.tryFrom(str.trim()).isSuccess() || str.startsWith("\"");
                 }
                 case Orders -> (title.equals("Your Bazaar Orders") || title.equals("Co-op Bazaar Orders"));
-                case InstaBuy -> title.endsWith("➜ Instant Buy");
+                case InstaBuy -> title.endsWith("➜ Instant") || title.endsWith("➜ Instant Buy");  // some item's name are too long for the title to include the "Buy" suffix
+                case InstaBuyConfirmation -> title.equals("Confirm Instant Buy");
+                case InstaSellConfirmation -> title.equals("Confirm Instant Sell"); // not sure if this exists
                 case BuyOrderSetupVolume -> title.equals("How many do you want?");
                 case BuyOrderSetupPrice -> title.equals("How much do you want to pay?");
                 case BuyOrderConfirmation -> title.equals("Confirm Buy Order");
