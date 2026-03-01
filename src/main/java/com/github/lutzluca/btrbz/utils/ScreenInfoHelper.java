@@ -210,8 +210,8 @@ public final class ScreenInfoHelper {
                         var slot = inventory.getContainerSize() - 4;
 
                         return Try
-                            .of(() -> inventory.getItem(slot).getItem())
-                            .map((item) -> item.equals(Items.BOOK) && item.getName().getString().equals("Manage Orders"))
+                            .of(() -> inventory.getItem(slot))
+                            .map((itemStack) -> itemStack.getItem().equals(Items.BOOK) && itemStack.getHoverName().getString().equals("Manage Orders"))
                             .getOrElse(false);
                     }).orElse(false);
                 }
