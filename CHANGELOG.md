@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.3.0-alpha] - 2026-03-10
+
+### Added
+
+- Added "Reopen Last Cancelled Buy Order" button in Manage Orders screen to quickly return to a product's Bazaar page
+- Added active order indicators (colored dots) for items with tracked orders in the bookmark list
+- Added chat message filtering for transient [Bazaar] system notifications
+
+### Fixed
+
+- Fixed synchronization issues when clearing tracked orders via a new batch reset mechanism
+- Fixed client crashes by adding null-safe guards for configuration enum bindings
+- Fixed bookmark indicators rendering when the module or feature is disabled
+- Fixed price formatting in the order book to use a fixed US locale for correct clipboard copying
+
+### Changed
+
+- Refactored Bazaar notifications to be entirely clickable instead of just the bracketed action
+- Changed order cancellation to require a optional modifier key (Ctrl/Alt) before copying the remaining amount
+- Improved notification styling and internal action component structure
+
+
 ## [0.2.0-alpha] - 2026-03-06
 
 ### Changed
