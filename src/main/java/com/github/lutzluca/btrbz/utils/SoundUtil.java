@@ -1,6 +1,7 @@
 package com.github.lutzluca.btrbz.utils;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
@@ -26,19 +27,25 @@ public class SoundUtil {
     }
 
     public static void playSound(SoundEvent sound, float volume, int repeatCount) {
-        long now = System.currentTimeMillis();
-        if (now - lastPlayedTimes.getOrDefault(sound, 0L) > SOUND_COOLDOWN_MS) {
-            lastPlayedTimes.put(sound, now);
-
-            for (int i = 0; i < repeatCount; i++) {
-                if (i == 0) {
-                    SoundUtil.play(sound, volume);
-                    continue;
-                }
-
-                ClientTickDispatcher.submit(mc -> SoundUtil.play(sound, volume), i * 3);
-            }
+        if (repeatCount <= 0) {
+            return;
         }
+
+        long now = System.currentTimeMillis();
+        lastPlayedTimes.compute(sound, (key, lastTime) -> {
+            if (now - Optional.ofNullable(lastTime).orElse(0L) > SOUND_COOLDOWN_MS) {
+                for (int i = 0; i < repeatCount; i++) {
+                    if (i == 0) {
+                        SoundUtil.play(sound, volume);
+                        continue;
+                    }
+                    ClientTickDispatcher.submit(mc -> SoundUtil.play(sound, volume), i * 3);
+                }
+                return now;
+            }
+
+            return lastTime;
+        });
     }
 
     public static void playSound(SoundEvent sound, float volume) {
