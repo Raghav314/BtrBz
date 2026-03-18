@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0-alpha] - 2026-03-18
+
+### Added
+
+- Added estimated fill time tooltips for bazaar orders based on moving week volume
+- Added sound notifications for alerts and order events
+- Added queue information display in matched and undercut chat notifications
+- Added clipboard volume preset (parse clipboard as number)
+- Added sign screen support during order setup flow
+
+### Changed
+
+- Renamed filledAmount to filledAmountSnapshot in OrderInfo to clarify it's a UI snapshot value
+- Changed notification message format and style
+
 ## [0.3.0-alpha] - 2026-03-10
 
 ### Added
@@ -20,7 +35,6 @@
 - Refactored Bazaar notifications to be entirely clickable instead of just the bracketed action
 - Changed order cancellation to require a optional modifier key (Ctrl/Alt) before copying the remaining amount
 - Improved notification styling and internal action component structure
-
 
 ## [0.2.0-alpha] - 2026-03-06
 
