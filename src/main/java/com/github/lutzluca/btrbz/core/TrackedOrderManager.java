@@ -297,7 +297,7 @@ public class TrackedOrderManager {
 
         public boolean notifyBest = true;
         public boolean onlyOnPriorityRegain = true;
-        public boolean soundBest = true;
+        public boolean soundBest = false;
         public boolean notifyMatched = true;
         public boolean soundMatched = true;
         public boolean notifyUndercut = true;
@@ -443,7 +443,7 @@ public class TrackedOrderManager {
             return Option
                 .<Boolean>createBuilder()
                 .name(Component.literal("Sound - Best"))
-                .binding(true, () -> this.soundBest, val -> this.soundBest = val)
+                .binding(false, () -> this.soundBest, val -> this.soundBest = val)
                 .description(OptionDescription.of(Component.literal(
                     "Play a sound when a best/top order notification is triggered")))
                 .controller(ConfigScreen::createBooleanController);
