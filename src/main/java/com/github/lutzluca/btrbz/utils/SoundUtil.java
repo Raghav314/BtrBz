@@ -33,17 +33,24 @@ public class SoundUtil {
 
         long now = System.currentTimeMillis();
         lastPlayedTimes.compute(sound, (key, lastTime) -> {
-            if (now - Optional.ofNullable(lastTime).orElse(0L) > SOUND_COOLDOWN_MS) {
+            long last = Optional.ofNullable(lastTime).orElse(0L);
+            if (now - last > SOUND_COOLDOWN_MS) {
+                log.debug("Requesting sound: {} (volume={}, repeats={})", sound.location(), volume, repeatCount);
                 for (int i = 0; i < repeatCount; i++) {
                     if (i == 0) {
                         SoundUtil.play(sound, volume);
                         continue;
                     }
-                    ClientTickDispatcher.submit(mc -> SoundUtil.play(sound, volume), i * 3);
+
+                    int delay = i * 3;
+                    log.debug("Scheduling repeat #{} for {} with delay {} ticks", i, sound.location(), delay);
+                    ClientTickDispatcher.submit(mc -> SoundUtil.play(sound, volume), delay);
                 }
+
                 return now;
             }
 
+            log.debug("Sound {} suppressed by cooldown ({}ms since last play)", sound.location(), now - last);
             return lastTime;
         });
     }
@@ -63,12 +70,14 @@ public class SoundUtil {
     private static void play(SoundEvent sound, float volume, int attemptsLeft) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) {
+            log.debug("Player is null, deferring sound {} ({} retries left)", sound.location(), attemptsLeft);
             if (attemptsLeft > 0) {
                 ClientTickDispatcher.submit(mc -> SoundUtil.play(sound, volume, attemptsLeft - 1), 20);
             }
             return;
         }
 
+        log.debug("Dispatching sound {} to SoundManager (volume: {})", sound.location(), volume);
         SimpleSoundInstance soundInstance = SimpleSoundInstance.forUI(sound, 1f, volume);
         client.getSoundManager().play(soundInstance);
     }
