@@ -147,10 +147,7 @@ public class BtrBz implements ClientModInitializer {
                 () -> OrderInfoParser
                     .parseSetOrderItem(stack)
                     .onSuccess(addOutstanding)
-                    .onFailure((err) -> log.warn(
-                        "Failed to parse confirm item",
-                        err
-                    ))
+                    .onFailure(err -> log.warn("Failed to parse confirm item", err))
             );
             BazaarOrderActions.setReopenBazaar();
         });
@@ -170,10 +167,6 @@ public class BtrBz implements ClientModInitializer {
             public boolean applies(ScreenInfo info, Slot slot, int button) {
                 var cfg = ConfigManager.get();
                 if (!cfg.flipHelper.enabled && !cfg.orderActions.enabled) {
-                    return false;
-                }
-
-                if (slot == null) {
                     return false;
                 }
 
