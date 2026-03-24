@@ -1,4 +1,4 @@
-package com.github.lutzluca.btrbz.core.order_book;
+package com.github.lutzluca.btrbz.core.orderbook;
 
 import com.github.lutzluca.btrbz.data.BazaarData.OrderLists;
 import com.github.lutzluca.btrbz.utils.Utils;

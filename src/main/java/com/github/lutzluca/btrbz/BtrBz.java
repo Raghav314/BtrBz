@@ -20,7 +20,7 @@ import com.github.lutzluca.btrbz.core.modules.orderpreset.OrderPresetsModule;
 import com.github.lutzluca.btrbz.core.modules.OrderValueModule;
 import com.github.lutzluca.btrbz.core.modules.PriceDiffModule;
 import com.github.lutzluca.btrbz.core.modules.TrackedOrdersListModule;
-import com.github.lutzluca.btrbz.core.order_book.OrderBookScreenController;
+import com.github.lutzluca.btrbz.core.orderbook.OrderBookScreenController;
 import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.data.BazaarMessageDispatcher;
 import com.github.lutzluca.btrbz.data.BazaarMessageDispatcher.BazaarMessage;

@@ -24,7 +24,7 @@ import com.github.lutzluca.btrbz.core.modules.OrderBookPriceModule;
 import com.github.lutzluca.btrbz.core.modules.OrderBookPriceModule.OrderBookPriceConfig;
 import com.github.lutzluca.btrbz.core.modules.TrackedOrdersListModule;
 import com.github.lutzluca.btrbz.core.modules.TrackedOrdersListModule.OrderListConfig;
-import com.github.lutzluca.btrbz.core.order_book.OrderBookScreenController.OrderBookConfig;
+import com.github.lutzluca.btrbz.core.orderbook.OrderBookScreenController.OrderBookConfig;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import lombok.extern.slf4j.Slf4j;
 
