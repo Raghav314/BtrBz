@@ -15,9 +15,7 @@ public class MessageQueue {
     private static final Deque<Entry> MESSAGES = new ArrayDeque<>();
 
     static {
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            MessageQueue.flush(client);
-        });
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> MessageQueue.flush(client));
     }
 
     public static void sendOrQueue(String message) { sendOrQueue(message, Level.Info); }

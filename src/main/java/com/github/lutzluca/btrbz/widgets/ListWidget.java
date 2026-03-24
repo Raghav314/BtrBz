@@ -182,7 +182,7 @@ public class ListWidget extends DraggableWidget {
 
             // Track hover time for lazy tooltip evaluation
             if (this.hoveredItemIndex != this.lastHoveredItemIndex) {
-                if (this.onHoverChangeCallback != null && canProcessHover) {
+                if (this.onHoverChangeCallback != null) {
                     this.onHoverChangeCallback.accept(this, this.lastHoveredItemIndex, this.hoveredItemIndex);
                 }
                 this.tooltipHoverTicks = 0;

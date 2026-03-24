@@ -42,6 +42,7 @@ public sealed interface OrderPreset permits OrderPreset.Volume, OrderPreset.Max,
         @Getter
         @Setter
         private boolean disabled = false;
+        @Setter
         private List<Component> tooltipLines = null;
         private final Component displayText;
         private final int backgroundColor;
@@ -54,10 +55,6 @@ public sealed interface OrderPreset permits OrderPreset.Volume, OrderPreset.Max,
                 case OrderPreset.Clipboard(int amount) -> 0x80204080;
                 case OrderPreset.Volume(int amount) -> 0x80000000;
             };
-        }
-
-        public void setTooltipLines(List<Component> lines) {
-            this.tooltipLines = lines;
         }
 
         @Override

@@ -57,7 +57,7 @@ public class BtrBz implements ClientModInitializer {
     public static final String MOD_ID = "btrbz";
     public static DataComponentType<Boolean> BOOKMARKED;
     
-    public static BazaarMessageDispatcher messageDispatcher = new BazaarMessageDispatcher();
+    public static final BazaarMessageDispatcher MESSAGE_DISPATCHER = new BazaarMessageDispatcher();
     private static final BazaarData BAZAAR_DATA = new BazaarData(HashBiMap.create());
     
     private static BtrBz instance;
@@ -194,26 +194,26 @@ public class BtrBz implements ClientModInitializer {
             }
         });
 
-        messageDispatcher.on(BazaarMessage.OrderFlipped.class, flipHelper::handleFlipped);
-        messageDispatcher.on(BazaarMessage.OrderFilled.class, orderManager::removeMatching);
-        messageDispatcher.on(BazaarMessage.OrderSetup.class, orderManager::confirmOutstanding);
+        MESSAGE_DISPATCHER.on(BazaarMessage.OrderFlipped.class, flipHelper::handleFlipped);
+        MESSAGE_DISPATCHER.on(BazaarMessage.OrderFilled.class, orderManager::removeMatching);
+        MESSAGE_DISPATCHER.on(BazaarMessage.OrderSetup.class, orderManager::confirmOutstanding);
 
-        messageDispatcher.on(
+        MESSAGE_DISPATCHER.on(
             BazaarMessage.InstaBuy.class,
             info -> orderLimitModule.onTransaction(info.total())
         );
-        messageDispatcher.on(
+        MESSAGE_DISPATCHER.on(
             BazaarMessage.InstaSell.class, info -> orderLimitModule
                 .onTransaction(info.total() * (1 - ConfigManager.get().tax / 100))
         );
-        messageDispatcher.on(
+        MESSAGE_DISPATCHER.on(
             BazaarMessage.OrderSetup.class,
             info -> orderLimitModule.onTransaction(info.total())
         );
 
-        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
-            messageDispatcher.handleChatMessage(ChatFormatting.stripFormatting(message.getString()));
-        });
+        ClientReceiveMessageEvents.GAME.register((message, overlay) ->
+            MESSAGE_DISPATCHER.handleChatMessage(ChatFormatting.stripFormatting(message.getString()))
+        );
 
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> {
             var rawMsg = ChatFormatting.stripFormatting(message.getString());

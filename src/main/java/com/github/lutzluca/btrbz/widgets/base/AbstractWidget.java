@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.jetbrains.annotations.NotNull;
 
 public abstract class AbstractWidget implements LayoutElement, GuiEventListener, Renderable {
     @Getter
@@ -44,7 +45,7 @@ public abstract class AbstractWidget implements LayoutElement, GuiEventListener,
     }
 
     @Override
-    public ScreenRectangle getRectangle() {
+    public @NotNull ScreenRectangle getRectangle() {
         return new ScreenRectangle(this.x, this.y, this.width, this.height);
     }
 

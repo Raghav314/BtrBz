@@ -39,7 +39,7 @@ public class TrackedOrderManager {
 
     private final BazaarData bazaarData;
 
-    private List<TrackedOrder> trackedOrders = new ArrayList<>();
+    private final List<TrackedOrder> trackedOrders = new ArrayList<>();
     private final TimedStore<OutstandingOrderInfo> outstandingOrderStore;
 
     private final List<Consumer<TrackedOrder>> onOrderAddedListeners = new ArrayList<>();

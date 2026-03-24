@@ -131,9 +131,7 @@ public class BazaarPoller {
             log.trace("Bazaar data updated after {}s", diffMs / 1000.0);
         }
 
-        Optional
-            .ofNullable(Minecraft.getInstance())
-            .ifPresent(client -> client.execute(() -> onReply.accept(products)));
+        Minecraft.getInstance().execute(() -> onReply.accept(products));
 
         long jitter = ThreadLocalRandom.current().nextLong(200, 400);
         this.scheduleFetch(BAZAAR_UPDATE_TIME_MS + jitter, "Regular interval fetch");

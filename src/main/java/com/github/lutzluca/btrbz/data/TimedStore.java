@@ -78,8 +78,7 @@ public class TimedStore<T> {
             var expired = Utils.removeIfAndReturn(this.entries, entry -> entry.expiresAt < now);
             log.trace(
                 "removed {} expired timedstore entry: {}",
-                expired.size(),
-                expired.toString()
+                expired.size(), expired
             );
         }
     }

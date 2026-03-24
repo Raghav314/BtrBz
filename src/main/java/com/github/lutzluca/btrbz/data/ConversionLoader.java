@@ -107,20 +107,18 @@ public final class ConversionLoader {
             fileInfo.flatMap(info -> {
                 if (currHash.equals(info.sha)) {
                     log.debug("Conversions are up to date");
-                    return Try.<Optional<LoadResult>>success(Optional.empty());
+                    return Try.success(Optional.empty());
                 }
 
                 log.debug("Update available, trying to fetch new conversions from github");
                 return fetchUrl(info.download_url)
                     .flatMap(ConversionData::parseFrom)
-                    .peek(newData -> {
-                        Utils.atomicDumpToFile(LOCAL_CONVERSION_FILEPATH, newData.content)
-                            .onSuccess(result -> MessageQueue.sendOrQueue("Updated local bazaar conversions", Level.Info))
-                            .onFailure(err -> {
-                                log.error("Failed to persist conversions to local cache, using in-memory only", err);
-                                MessageQueue.sendOrQueue("Failed to cache conversions locally", Level.Warn);
-                            });
-                    })
+                    .peek(newData -> Utils.atomicDumpToFile(LOCAL_CONVERSION_FILEPATH, newData.content)
+                        .onSuccess(result -> MessageQueue.sendOrQueue("Updated local bazaar conversions", Level.Info))
+                        .onFailure(err -> {
+                            log.error("Failed to persist conversions to local cache, using in-memory only", err);
+                            MessageQueue.sendOrQueue("Failed to cache conversions locally", Level.Warn);
+                        }))
                     .map(newData -> Optional.of(new LoadResult(
                         newData.conversions,
                         computeGitBlobHash(newData.content)

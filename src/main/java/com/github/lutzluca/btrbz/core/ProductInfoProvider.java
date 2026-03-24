@@ -401,7 +401,7 @@ public final class ProductInfoProvider {
             var ids = OrderInfoParser
                 .getLore(stack)
                 .stream()
-                .map(potentialProduct -> this.bazaarData.nameToId(potentialProduct))
+                .map(this.bazaarData::nameToId)
                 .flatMap(Optional::stream)
                 .distinct()
                 .toList();

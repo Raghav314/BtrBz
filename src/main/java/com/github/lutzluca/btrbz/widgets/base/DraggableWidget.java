@@ -132,11 +132,6 @@ public abstract class DraggableWidget extends AbstractWidget {
         return false;
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        return false;
-    }
-
     protected void cancelDrag() {
         this.isPressed = false;
 

@@ -78,9 +78,7 @@ public class AlertManager {
         var exist = alerts.stream().anyMatch(alert -> alert.matches(args));
 
         if (!exist) {
-            ConfigManager.withConfig(cfg -> {
-                cfg.alert.alerts.add(new Alert(args));
-            });
+            ConfigManager.withConfig(cfg -> cfg.alert.alerts.add(new Alert(args)));
         }
 
         return !exist;

@@ -95,9 +95,7 @@ public final class GameUtils {
 
     public static <T> void copyToClipboard(T value) {
         Minecraft client = Minecraft.getInstance();
-        if (client != null) {
-            client.keyboardHandler.setClipboard(String.valueOf(value));
-        }
+        client.keyboardHandler.setClipboard(String.valueOf(value));
     }
 
     public static Component join(List<Component> lines, String sequence) {

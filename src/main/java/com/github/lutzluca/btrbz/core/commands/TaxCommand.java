@@ -60,7 +60,7 @@ public class TaxCommand {
                             .append(Component
                                 .literal("Successfully set tax rate to ")
                                 .withStyle(ChatFormatting.GRAY))
-                            .append(Component.literal(+rate + "%").withStyle(ChatFormatting.AQUA)));
+                            .append(Component.literal(rate + "%").withStyle(ChatFormatting.AQUA)));
                         return 1;
                     })))
 

@@ -233,12 +233,10 @@ public class BookmarkModule extends Module<BookMarkConfig> {
     private void syncBookmarksFromList(List<Renderable> items) {
         log.debug("Syncing bookmarks from widget list to config");
 
-        this.updateConfig(cfg -> {
-            cfg.bookmarkedItems = items.stream()
-                .map(BookmarkedItemRenderable.class::cast)
-                .map(item -> new BookmarkedItem(item.getProductName(), item.getItemStack()))
-                .collect(Collectors.toList());
-        });
+        this.updateConfig(cfg -> cfg.bookmarkedItems = items.stream()
+            .map(BookmarkedItemRenderable.class::cast)
+            .map(item -> new BookmarkedItem(item.getProductName(), item.getItemStack()))
+            .collect(Collectors.toList()));
     }
 
     private Optional<Position> getConfigPosition() {

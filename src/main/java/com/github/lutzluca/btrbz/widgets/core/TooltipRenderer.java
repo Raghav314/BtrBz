@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 /**
  * Utility for rendering tooltips with consistent behavior across widgets.
- * 
+ * <p>
  * Supports both immediate rendering and deferred rendering via setTooltipForNextFrame.
  */
 public final class TooltipRenderer {

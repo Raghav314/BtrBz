@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Interface for objects that can render themselves.
- *
+ * <p>
  * This allows list widgets to manage any renderable object,
  * not just widgets. The renderable handles its own rendering
  * logic, while the container (e.g. list) manages positioning.

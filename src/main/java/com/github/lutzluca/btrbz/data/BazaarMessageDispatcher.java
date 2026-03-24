@@ -22,9 +22,9 @@ public final class BazaarMessageDispatcher {
     private <T extends BazaarMessage> void dispatch(T msg) {
         log.debug("Dispatching bazaar message: {}", msg);
 
-        Optional.ofNullable(this.listeners.get(msg.getClass())).ifPresent(listeners -> {
-            listeners.forEach(listener -> ((Consumer<T>) listener).accept(msg));
-        });
+        Optional.ofNullable(this.listeners.get(msg.getClass())).ifPresent(listeners ->
+            listeners.forEach(listener -> ((Consumer<T>) listener).accept(msg))
+        );
     }
 
     public void handleChatMessage(String msg) {

@@ -126,9 +126,6 @@ public class FlipHelper {
             @Override
             public boolean onClick(ScreenInfo info, Slot slot, int button) {
                 var client = Minecraft.getInstance();
-                if (client == null) {
-                    return false;
-                }
 
                 var gcsOpt = info.getGenericContainerScreen();
                 if (gcsOpt.isEmpty()) {

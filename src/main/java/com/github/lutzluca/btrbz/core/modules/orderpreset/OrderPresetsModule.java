@@ -180,7 +180,7 @@ public class OrderPresetsModule extends Module<OrderPresetsConfig> {
         presets.addFirst(new OrderPreset.Max());
 
         var clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
-        if (clipboard != null && !clipboard.isBlank()) {
+        if (!clipboard.isBlank()) {
             Utils.parseUsFormattedNumber(clipboard).map(Number::intValue).onSuccess(clipboardVolume -> {
                 if (clipboardVolume > 0 && clipboardVolume <= this.currMaxVolume) {
                     presets.add(1, new OrderPreset.Clipboard(clipboardVolume));
