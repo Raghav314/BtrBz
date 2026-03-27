@@ -30,6 +30,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.jetbrains.annotations.Nullable;
+
 import lombok.extern.slf4j.Slf4j;
 import net.hypixel.api.reply.skyblock.SkyBlockBazaarReply.Product;
 import net.minecraft.network.chat.Component;
@@ -45,7 +50,6 @@ public class TrackedOrderManager {
     private final List<Consumer<TrackedOrder>> onOrderAddedListeners = new ArrayList<>();
     private final List<Consumer<TrackedOrder>> onOrderRemovedListeners = new ArrayList<>();
     private final List<Runnable> onOrdersResetListeners = new ArrayList<>();
-    private final List<Consumer<StatusUpdate>> onOrderStatusUpdate = new ArrayList<>();
     private BiConsumer<List<UnfilledOrderInfo>, List<FilledOrderInfo>> onSyncCompletedCallback = null;
 
     public TrackedOrderManager(BazaarData bazaarData) {
@@ -73,10 +77,6 @@ public class TrackedOrderManager {
 
     public void afterOrderSync(BiConsumer<List<UnfilledOrderInfo>, List<FilledOrderInfo>> cb) {
         this.onSyncCompletedCallback = cb;
-    }
-
-    public void addOnOrderStatusUpdate(Consumer<StatusUpdate> listener) {
-        this.onOrderStatusUpdate.add(listener);
     }
 
     public void syncOrders(List<OrderInfo> parsedOrders) {
@@ -126,59 +126,237 @@ public class TrackedOrderManager {
         }
     }
 
-    public void onBazaarUpdate(Map<String, Product> products) {
-        this.trackedOrders
-            .stream()
-            .map(tracked -> {
-                var id = bazaarData.nameToId(tracked.productName);
-                if (id.isEmpty()) {
-                    log.warn(
-                        "No name -> id mapping found for product with name: '{}'",
-                        tracked.productName
-                    );
-                    return Optional.<TrackedStatus>empty();
-                }
+    public record GroupKey(String productName, OrderType type, double pricePerUnit) {}
 
-                var product = Optional.ofNullable(products.get(id.get()));
-                if (product.isEmpty()) {
-                    log.warn(
-                        "No product found for item with name '{}' and mapped id '{}'",
-                        tracked.productName,
-                        id.get()
-                    );
-                    return Optional.<TrackedStatus>empty();
-                }
-
-                var status = this.getStatus(tracked, product.get());
-                if (status.isEmpty()) {
-                    log.debug(
-                        "Unable to determine curr for product '{}' with id '{}'",
-                        tracked.productName,
-                        id.get()
-                    );
-                    return Optional.<TrackedStatus>empty();
-                }
-
-                return Optional.of(new TrackedStatus(tracked, status.get()));
-            })
-            .flatMap(Optional::stream)
-            .filter(trackedStatus -> !trackedStatus.trackedOrder().status.sameVariant(trackedStatus.status()))
-            .forEach(trackedStatus -> {
-                var statusUpdate = new StatusUpdate(
-                    trackedStatus.trackedOrder(),
-                    trackedStatus.status(),
-                    trackedStatus.trackedOrder().status
-                );
-
-                trackedStatus.trackedOrder().status = statusUpdate.curr;
-
-                this.onOrderStatusUpdate.forEach(listener -> listener.accept(statusUpdate));
-
-                if (this.shouldNotify(statusUpdate)) {
-                    Notifier.notifyOrderStatus(statusUpdate, this.bazaarData);
-                }
-            });
+    public sealed interface GroupStatus {
+        record Undercut(double amount) implements GroupStatus {}
+        record Matched() implements GroupStatus {}
+        record SelfMatched() implements GroupStatus {}
     }
+
+    public void onBazaarUpdate(Map<String, Product> products) {
+        var updates = this.computeStatusUpdates(products).peek(update -> {
+            update.order().status = update.curr;
+        }).collect(Collectors.toList());
+
+        this.sendNotifications(updates, products);        
+    }
+
+    // Known limitation: transitions that only change `GroupStatus` without changing the underlying
+    // `OrderStatus` variant are not detected. Concretely, if a stranger cancels their order from
+    // your bucket, all your orders stay `OrderStatus.Matched`, no `sameVariant` change fires, so
+    // no `StatusUpdate` is produced, and `sendNotifications` never processes the group.
+    // Fixing this would require a separate group-level status diff pass (tracking previous
+    // `GroupStatus` across polls), which adds meaningful complexity for a low-value scenario.
+    // Accepted as a known limitation (for now).
+    private void sendNotifications(List<StatusUpdate> statusUpdates, Map<String, Product> products) {
+        var cfg = ConfigManager.get().trackedOrders;
+        if(!cfg.enabled) {
+            return;
+        }
+
+        Map<GroupKey, List<TrackedOrder>> orderGroups = this.trackedOrders.stream()
+            .collect(Collectors.groupingBy(order -> new GroupKey(
+                order.productName,
+                order.type,
+                order.pricePerUnit
+            )));
+        Map<GroupKey, List<StatusUpdate>> statusGroups = statusUpdates.stream()
+            .collect(Collectors.groupingBy(update -> new GroupKey(
+                update.order().productName,
+                update.order().type,
+                update.order().pricePerUnit
+            )));
+
+        for(var entry : statusGroups.entrySet()) {
+            var key = entry.getKey();
+            var updates = entry.getValue();
+            var orders = orderGroups.get(key);
+            
+            if(orders.size() == 1) {
+                var statusUpdate = updates.getFirst();
+                if(this.shouldNotify(statusUpdate)) {
+                    Notifier.notifyOrderStatus(statusUpdate, bazaarData);
+                }
+                continue;
+            }
+
+            this.processGroupNotification(key, orders, updates, products);
+        }
+    }
+
+    private void processGroupNotification(
+        GroupKey key,
+        List<TrackedOrder> orders,
+        List<StatusUpdate> updates,
+        Map<String,Product> products
+    ) {
+        var cfg = ConfigManager.get().trackedOrders;
+        
+        if(!cfg.groupOrders) {
+            updates.stream()
+                .filter(this::shouldNotify)
+                .forEach(update -> Notifier.notifyOrderStatus(update, bazaarData));
+            return;   
+        }
+
+        GroupStatus curr = this.getCurrentGroupStatus(key, orders, products);
+        
+        if(curr == null) {
+            log.warn("Group ({}) has no settled status, skipping group notification", key);
+            return;
+        }
+
+        boolean shouldNotify = switch (curr) {
+            case GroupStatus.Undercut ignored -> cfg.notifyUndercut;
+            case GroupStatus.Matched ignored -> cfg.notifyMatched;
+            case GroupStatus.SelfMatched ignored -> cfg.notifyMatched;
+        };
+
+        if (!shouldNotify) {
+            return;
+        }
+
+        GroupStatus prev = this.getPreviousGroupStatus(key, orders, updates);
+        Notifier.notifyGroupOrderStatus(key, orders, curr, prev, this.bazaarData);
+    }
+
+    private @Nullable GroupStatus getCurrentGroupStatus(GroupKey key, List<TrackedOrder> orders, Map<String,Product> products) {
+        boolean hasMatched = orders.stream().anyMatch(order -> order.status instanceof OrderStatus.Matched);
+        boolean hasUndercut = orders.stream().anyMatch(order -> order.status instanceof OrderStatus.Undercut);
+        boolean hasUnknown = orders.stream().anyMatch(order -> order.status instanceof OrderStatus.Unknown);
+
+        if(hasUnknown) {
+            log.warn("Group ({}) has Unknown-status order after poll. Likely unresolved product name, skipping group notification", key);
+            return null;
+        }
+
+        if(hasMatched && hasUndercut) {
+            log.warn("Group ({}) has both Matched and Undercut orders. This must be a logic error, skipping group notification", key);
+            return null;
+        }
+
+        // either matched or undercut
+        if(hasUndercut) {
+            // per definition all the orders within the `orders` list must have undercut status
+            // as well as the same (product name, type, price per unit)
+            var representativeOrder = orders.getFirst();
+            var undercutAmount = ((OrderStatus.Undercut) representativeOrder.status).amount;
+            return new GroupStatus.Undercut(undercutAmount);
+        }
+
+        int bucketOrderCount = this.countOrdersAtBestPrice(key, this.bazaarData);
+        if(bucketOrderCount == -1) {
+            log.warn("Group ({}) has no orders at the given price per unit, skipping group notification", key);
+            return null;
+        }
+
+        return orders.size() == bucketOrderCount ? new GroupStatus.SelfMatched() : new GroupStatus.Matched();
+    }
+
+   // Reconstruct the previous group status from two sources:
+   // - Orders that did NOT change this poll are absent from `updates`, meaning their current
+   //   status IS their previous status (nothing moved for them).
+   // - Orders that DID change this poll have an explicit `prev` field in their `StatusUpdate`,
+   //   which overrides the default.
+   // Building a full `prevStatuses` map across all orders gives us a complete picture of where
+   // the entire group stood before this poll, which we then reduce to a single `GroupStatus`
+   // using the same precedence as `getCurrentGroupStatus`: `Undercut` > `Matched` > everything else.
+    private @Nullable GroupStatus getPreviousGroupStatus(GroupKey key, List<TrackedOrder> orders, List<StatusUpdate> updates) {
+        Map<TrackedOrder, OrderStatus> prevStatuses = orders.stream()
+            .collect(Collectors.toMap(order -> order, order -> order.status));
+
+        updates.forEach(update -> prevStatuses.put(update.order(), update.prev()));
+
+        var values = prevStatuses.values();
+
+        if (values.stream().anyMatch(status -> status instanceof OrderStatus.Undercut)) {
+            // `amount` MUST be identical across all orders in the group
+            double amount = values.stream()
+                .filter(status -> status instanceof OrderStatus.Undercut)
+                .map(status -> ((OrderStatus.Undercut) status).amount)
+                .findFirst()
+                .orElseThrow();
+            return new GroupStatus.Undercut(amount);
+        }
+
+        if (values.stream().anyMatch(status -> status instanceof OrderStatus.Matched)) {
+            return new GroupStatus.Matched();
+        }
+
+        // Top, Unknown, or mix of both -> group had no settled matched state before
+        log.debug("Group ({}) had no prior matched group state. currently tracked orders: {} | updates: {}", 
+            key, orders, updates);
+        return null;
+    }
+
+    private int countOrdersAtBestPrice(GroupKey key, BazaarData bazaarData) {
+        var productId = bazaarData.nameToId(key.productName).orElse(null);
+        if (productId == null) {
+            log.warn("Group ({}) has no name -> id mapping, skipping group notification", key);
+            return -1;
+        }
+        
+        var lists = bazaarData.getOrderLists(productId);
+        
+        var relevantSummaries = switch (key.type) {
+            case Buy -> lists.buyOrders();
+            case Sell -> lists.sellOffers();
+        };
+    
+        return relevantSummaries.stream()
+            .filter(summary -> summary.getPricePerUnit() == key.pricePerUnit)
+            .findFirst()
+            .map(summary -> (int) summary.getOrders())
+            .orElse(-1);
+    }
+
+    public Stream<StatusUpdate> computeStatusUpdates(Map<String, Product> products) {
+        return this.trackedOrders
+            .stream()
+            .map(order -> this.getTrackedStatus(order, products))
+            .flatMap(Optional::stream)
+            .filter(trackedStatus -> !trackedStatus.order().status.sameVariant(trackedStatus.status()))
+            .map(trackedStatus -> new StatusUpdate(
+                trackedStatus.order(),
+                trackedStatus.status(),
+                trackedStatus.order().status
+            ));
+    }
+
+    private Optional<TrackedStatus> getTrackedStatus(TrackedOrder order, Map<String, Product> products) {
+        var id = bazaarData.nameToId(order.productName);
+        if (id.isEmpty()) {
+            log.warn(
+                "No name -> id mapping found for product with name: '{}'",
+                order.productName
+            );
+            return Optional.empty();
+        }
+
+        var product = Optional.ofNullable(products.get(id.get()));
+        if (product.isEmpty()) {
+            log.warn(
+                "No product found for item with name '{}' and mapped id '{}'",
+                order.productName,
+                id.get()
+            );
+            return Optional.empty();
+        }
+
+        var status = this.getStatus(order, product.get());
+        if (status.isEmpty()) {
+            log.debug(
+                "Unable to determine curr for product '{}' with id '{}'",
+                order.productName,
+                id.get()
+            );
+            return Optional.empty();
+        }
+
+        return Optional.of(new TrackedStatus(order, status.get()));
+    }
+
 
     private boolean shouldNotify(StatusUpdate update) {
         var cfg = ConfigManager.get().trackedOrders;
@@ -287,9 +465,9 @@ public class TrackedOrderManager {
         };
     }
 
-    private record TrackedStatus(TrackedOrder trackedOrder, OrderStatus status) { }
+    private record TrackedStatus(TrackedOrder order, OrderStatus status) { }
 
-    public record StatusUpdate(TrackedOrder trackedOrder, OrderStatus curr, OrderStatus prev) { }
+    public record StatusUpdate(TrackedOrder order, OrderStatus curr, OrderStatus prev) { }
 
     public static class OrderManagerConfig {
 
@@ -309,6 +487,9 @@ public class TrackedOrderManager {
         public boolean showQueueInfo = true;
         public QueueDisplayMode queueDisplayMode = QueueDisplayMode.Both;
 
+        public boolean groupOrders = true;
+        public boolean includePricePerUnit = false;
+
         public OptionGroup createGroup() {
             var notifyBestGroup = new OptionGrouping(this.createNotifyBestOption())
                 .addOptions(
@@ -321,6 +502,8 @@ public class TrackedOrderManager {
 
             var rootGroup = new OptionGrouping(this.createEnabledOption())
                 .addOptions(
+                    this.createGroupOrdersOption(),
+                    this.createIncludePricePerUnitOption(),
                     this.createGotoMatchedOption(),
                     this.createGotoUndercutOption(),
                     this.createNotifyMatchedOption(),
@@ -466,6 +649,26 @@ public class TrackedOrderManager {
                 .binding(true, () -> this.soundUndercut, val -> this.soundUndercut = val)
                 .description(OptionDescription.of(Component.literal(
                     "Play a sound when an undercut notification is triggered")))
+                .controller(ConfigScreen::createBooleanController);
+        }
+
+        private Option.Builder<Boolean> createGroupOrdersOption() {
+            return Option
+                .<Boolean>createBuilder()
+                .name(Component.literal("Group Orders"))
+                .binding(true, () -> this.groupOrders, val -> this.groupOrders = val)
+                .description(OptionDescription.of(Component.literal(
+                    "Group multiple orders at the same price into a single notification")))
+                .controller(ConfigScreen::createBooleanController);
+        }
+
+        private Option.Builder<Boolean> createIncludePricePerUnitOption() {
+            return Option
+                .<Boolean>createBuilder()
+                .name(Component.literal("Include Price Per Unit"))
+                .binding(false, () -> this.includePricePerUnit, val -> this.includePricePerUnit = val)
+                .description(OptionDescription.of(Component.literal(
+                    "Include the price per unit in the notification message")))
                 .controller(ConfigScreen::createBooleanController);
         }
 
