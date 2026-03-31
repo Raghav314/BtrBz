@@ -6,10 +6,10 @@ import com.github.lutzluca.btrbz.utils.ScreenActionManager;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper;
 import com.github.lutzluca.btrbz.core.ModuleManager;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -29,26 +29,26 @@ public abstract class AbstractContainerScreenMixin {
         }
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
-    private void onRender(GuiGraphics graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
+    private void onRender(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         var wm = ModuleManager.getInstance().getWidgetManager();
         if (wm != null) {
             wm.render(graphics, mouseX, mouseY, delta);
         }
     }
 
-    @Inject(method = "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ClickType;)V", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "slotClicked(Lnet/minecraft/world/inventory/Slot;IILnet/minecraft/world/inventory/ContainerInput;)V", at = @At("HEAD"), cancellable = true)
     private void onSlotClicked(
         Slot slot,
         int slotId,
-        int button,
-        ClickType actionType,
+        int buttonNum,
+        ContainerInput containerInput,
         CallbackInfo ci
     ) {
         var cancelled = ScreenActionManager.handleClick(
             ScreenInfoHelper.get().getCurrInfo(),
             slot,
-            button
+            buttonNum
         );
 
         if (cancelled) {
@@ -56,23 +56,14 @@ public abstract class AbstractContainerScreenMixin {
         }
     }
 
-    @Inject(method = "renderSlot", at = @At("HEAD"))
-    //? if >=1.21.11 {
-    /*private void afterRenderSlot(
-        GuiGraphics context,
+    @Inject(method = "extractSlot", at = @At("HEAD"))
+    private void afterRenderSlot(
+        GuiGraphicsExtractor context,
         Slot slot,
         int mouseX,
         int mouseY,
         CallbackInfo ci
-    )
-    *///?} else {
-    private void afterRenderSlot(
-        GuiGraphics context,
-        Slot slot,
-        CallbackInfo ci
-    )
-    //?}
-    {
+    ) {
         if (!ScreenInfoHelper.inMenu(ScreenInfoHelper.BazaarMenuType.Orders)) {
             return;
         }

@@ -10,7 +10,7 @@ import com.github.lutzluca.btrbz.widgets.ListWidget;
 import com.github.lutzluca.btrbz.widgets.Renderable;
 import net.hypixel.api.reply.skyblock.SkyBlockBazaarReply.Product.Summary;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 
 import net.minecraft.client.input.MouseButtonEvent;
@@ -123,20 +123,21 @@ public class OrderBookScreen extends Screen {
         Minecraft.getInstance().setScreen(parent);
     }
 
+
     @Override
-    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractBackground(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         // suppress vanilla background rendering so it does not cover the custom background
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, this.width, this.height, 0x80000000);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         int listY = (this.height - (int) (this.height * 0.8)) / 2 + 40;
 
-        context.drawCenteredString(
+        context.centeredText(
             this.font,
             this.title,
             this.width / 2,
@@ -145,7 +146,7 @@ public class OrderBookScreen extends Screen {
         );
 
         Component subtitle = Component.literal("Click an order to copy its price");
-        context.drawCenteredString(
+        context.centeredText(
             this.font,
             subtitle,
             this.width / 2,
@@ -202,7 +203,7 @@ public class OrderBookScreen extends Screen {
 
         @Override
         public void render(
-            GuiGraphics ctx,
+            GuiGraphicsExtractor context,
             int x, int y, int width, int height,
             int mouseX, int mouseY, float delta,
             boolean hovered
@@ -211,19 +212,19 @@ public class OrderBookScreen extends Screen {
 
             if (hovered) {
                 int color = type == OrderType.Buy ? 0x6022AA22 : 0x60AA2222;
-                ctx.fill(x, y, x + width, y + height, color);
+                context.fill(x, y, x + width, y + height, color);
             }
 
             int textColor = type == OrderType.Buy ? 0xFF55FF55 : 0xFFFF5555;
             int yPos = y + (height - font.lineHeight) / 2;
 
-            ctx.drawString(font, this.priceText, x + 5, yPos, textColor);
+            context.text(font, this.priceText, x + 5, yPos, textColor);
 
             int ordersWidth = font.width(this.ordersText);
-            ctx.drawString(font, this.ordersText, x + width - ordersWidth - 5, yPos, 0xFF888888);
+            context.text(font, this.ordersText, x + width - ordersWidth - 5, yPos, 0xFF888888);
 
             int amountWidth = font.width(this.amountText);
-            ctx.drawString(font, this.amountText, x + width - ordersWidth - amountWidth - 12, yPos, 0xFFCCCCCC);
+            context.text(font, this.amountText, x + width - ordersWidth - amountWidth - 12, yPos, 0xFFCCCCCC);
         }
 
         public double getPricePerUnit() {

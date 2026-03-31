@@ -1,5 +1,6 @@
 package com.github.lutzluca.btrbz.core.modules.orderpreset;
 
+import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import com.github.lutzluca.btrbz.core.modules.Module;
 import com.github.lutzluca.btrbz.data.OrderInfoParser;
 
@@ -21,7 +22,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.SignEditScreen;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
@@ -408,8 +409,8 @@ public class OrderPresetsModule extends Module<OrderPresetsConfig> {
         }
 
         // noinspection OptionalGetWithoutIsPresent
-        interactionManager.handleInventoryMouseClick(
-            currInfo.getGenericContainerScreen().get().getMenu().containerId, 16, 1, ClickType.PICKUP, player
+        interactionManager.handleContainerInput(
+            currInfo.getGenericContainerScreen().get().getMenu().containerId, 16, 1, ContainerInput.PICKUP, player
         );
     }
 

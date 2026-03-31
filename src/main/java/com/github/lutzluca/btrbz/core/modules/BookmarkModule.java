@@ -42,13 +42,13 @@ import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -282,7 +282,7 @@ public class BookmarkModule extends Module<BookMarkConfig> {
 
         @Override
         public void render(
-            GuiGraphics graphics,
+            GuiGraphicsExtractor graphics,
             int x, int y, int width, int height,
             int mouseX, int mouseY, float delta,
             boolean hovered
@@ -301,12 +301,12 @@ public class BookmarkModule extends Module<BookMarkConfig> {
             matrices.pushMatrix();
             matrices.translate(iconX, iconY);
             matrices.scale(scale, scale);
-            graphics.renderItem(this.itemStack, 0, 0);
+            graphics.item(this.itemStack, 0, 0);
             matrices.popMatrix();
 
             int textX = iconX + 18;
             int textY = y + (height - font.lineHeight) / 2;
-            graphics.drawString(font, this.displayText, textX, textY, this.color);
+            graphics.text(font, this.displayText, textX, textY, this.color);
 
             // Draw order indicator
             if (!ConfigManager.get().bookmark.showOrderIndicators) {
@@ -333,7 +333,7 @@ public class BookmarkModule extends Module<BookMarkConfig> {
             }
         }
 
-        private static void drawDot(GuiGraphics graphics, int cx, int cy, int radius, int color) {
+        private static void drawDot(GuiGraphicsExtractor graphics, int cx, int cy, int radius, int color) {
             for (int dy = -radius; dy <= radius; dy++) {
                 for (int dx = -radius; dx <= radius; dx++) {
                     if (dx * dx + dy * dy <= radius * radius) {
@@ -389,10 +389,10 @@ public class BookmarkModule extends Module<BookMarkConfig> {
                 var itemData = obj.getAsJsonObject("itemStack");
 
                 //? if >=1.21.11 {
-                /*var itemId =  Identifier.parse(itemData.get("id").getAsString());
-                *///?} else {
-                var itemId =  ResourceLocation.parse(itemData.get("id").getAsString());
-                //?}
+                var itemId =  Identifier.parse(itemData.get("id").getAsString());
+                //?} else {
+                /*var itemId =  ResourceLocation.parse(itemData.get("id").getAsString());
+                *///?}
 
                 var item = BuiltInRegistries.ITEM.getValue(itemId);
                 var stack = new ItemStack(item);
