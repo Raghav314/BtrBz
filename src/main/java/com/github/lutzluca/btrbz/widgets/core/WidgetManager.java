@@ -40,7 +40,7 @@ public class WidgetManager {
     }
 
     public void init() {
-        log.debug("Initializing {} widgets", this.widgets.size());
+        log.trace("Initializing {} widgets", this.widgets.size());
     }
 
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float delta) {
@@ -147,7 +147,7 @@ public class WidgetManager {
     }
 
     public void cleanup() {
-        log.debug("Cleaning up {} widgets", this.widgets.size());
+        log.trace("Cleaning up {} widgets", this.widgets.size());
         this.widgets.clear();
     }
 
