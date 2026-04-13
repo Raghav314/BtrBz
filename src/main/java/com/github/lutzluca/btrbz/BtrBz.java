@@ -221,6 +221,7 @@ public class BtrBz implements ClientModInitializer {
                 return message;
             }
 
+            // TODO: make this optional (config flag)
             return message.copy()
                 .withStyle(style -> style
                     .withClickEvent(new RunCommand("/managebazaarorders"))
