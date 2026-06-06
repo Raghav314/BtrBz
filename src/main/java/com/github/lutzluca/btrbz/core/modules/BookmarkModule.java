@@ -192,14 +192,14 @@ public class BookmarkModule extends Module<BookMarkConfig> {
         private BookmarkedItemHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
-            return slot.slotIndex() == 13 && slot.currInfo().inMenu(BazaarMenuType.Item);
+        public boolean matches(SlotView view) {
+            return view.slotIdx() == 13 && view.currInfo().inMenu(BazaarMenuType.Item);
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext context) {
-            var rawStack = context.view().rawStack();
-            if (context.view().playerInventorySlot() || rawStack.isEmpty()) {
+        public ItemStack createDisplayStack(SlotRenderContext ctx) {
+            var rawStack = ctx.view().rawStack();
+            if (ctx.view().playerInventorySlot() || rawStack.isEmpty()) {
                 return null;
             }
 
@@ -217,8 +217,8 @@ public class BookmarkModule extends Module<BookMarkConfig> {
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
-            var rawStack = context.slot().rawStack();
+        public SlotClickResult onClick(SlotClickContext ctx) {
+            var rawStack = ctx.slot().rawStack();
             var bookmarked = rawStack.get(BtrBz.BOOKMARKED);
             if (bookmarked == null) {
                 return SlotClickResult.Pass;

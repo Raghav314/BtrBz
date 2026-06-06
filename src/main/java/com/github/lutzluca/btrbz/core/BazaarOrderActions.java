@@ -205,18 +205,17 @@ public class BazaarOrderActions {
         private CancelOrderHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             var cfg = ConfigManager.get().orderActions;
             return cfg.enabled
-                && !slot.playerInventorySlot()
-                && slot.currInfo().inMenu(BazaarMenuType.OrderOptions)
-                && slot.prevInfo() != null
-                && slot.prevInfo().inMenu(BazaarMenuType.Orders)
-                && BazaarOrderActions.this.isCancelOrderSlot(slot.slot());
+                && !view.playerInventorySlot()
+                && view.currInfo().inMenu(BazaarMenuType.OrderOptions)
+                && view.prevInfo().inMenu(BazaarMenuType.Orders)
+                && BazaarOrderActions.this.isCancelOrderSlot(view.slot());
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             if (BazaarOrderActions.this.activeBuyOrderContext != null) {
                 BazaarOrderActions.this.lastCancelledBuyOrder = BazaarOrderActions.this.activeBuyOrderContext;
                 BazaarOrderActions.this.hideCancelledOrderButton = false;
@@ -245,24 +244,25 @@ public class BazaarOrderActions {
         }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             var cfg = ConfigManager.get().orderActions;
+            
             return cfg.enabled
                 && cfg.reopenLastBuyOrderEnabled
                 && (!cfg.clearOnClose || !BazaarOrderActions.this.hideCancelledOrderButton)
                 && BazaarOrderActions.this.lastCancelledBuyOrder != null
-                && !slot.playerInventorySlot()
-                && slot.currInfo().inMenu(BazaarMenuType.Orders)
-                && slot.slotIndex() == BazaarOrderActions.this.getReopenTargetSlotIdx(slot);
+                && !view.playerInventorySlot()
+                && view.currInfo().inMenu(BazaarMenuType.Orders)
+                && view.slotIdx() == BazaarOrderActions.this.getReopenTargetSlotIdx(view);
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext context) {
+        public ItemStack createDisplayStack(SlotRenderContext ctx) {
             return BazaarOrderActions.this.lastCancelledBuyOrder.displayItem().copy();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             log.debug("Reopening bazaar page for product '{}'", BazaarOrderActions.this.lastCancelledBuyOrder.productName());
             GameUtils.runCommand("bz " + BazaarOrderActions.this.lastCancelledBuyOrder.productName());
             return SlotClickResult.Consume;
@@ -274,20 +274,21 @@ public class BazaarOrderActions {
         private OrdersObserverHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             return ConfigManager.get().orderActions.enabled
-                && slot.currInfo().inMenu(BazaarMenuType.Orders)
-                && !slot.playerInventorySlot();
+                && view.currInfo().inMenu(BazaarMenuType.Orders)
+                && !view.playerInventorySlot();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
+            var slot = ctx.slot();
             var orderInfo = OrderInfoParser.parseOrderInfo(
-                context.slot().rawStack(),
-                context.slot().slotIndex()
+                slot.rawStack(),
+                slot.slotIdx()
             );
             if (orderInfo.isSuccess()) {
-                BazaarOrderActions.this.onOrderClick(orderInfo.get(), context.slot().rawStack());
+                BazaarOrderActions.this.onOrderClick(orderInfo.get(), slot.rawStack());
             }
 
             return SlotClickResult.Pass;

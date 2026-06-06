@@ -49,7 +49,7 @@ class SlotHookRegistryTest {
 
             SlotHookRegistry.register(new SlotHook() {
                 @Override
-                public boolean matches(SlotView slot) {
+                public boolean matches(SlotView view) {
                     return true;
                 }
 
@@ -60,7 +60,7 @@ class SlotHookRegistryTest {
             });
             SlotHookRegistry.register(new SlotHook() {
                 @Override
-                public boolean matches(SlotView slot) {
+                public boolean matches(SlotView view) {
                     return true;
                 }
 
@@ -80,7 +80,7 @@ class SlotHookRegistryTest {
 
             SlotHookRegistry.register(new SlotHook() {
                 @Override
-                public boolean matches(SlotView slot) {
+                public boolean matches(SlotView view) {
                     return true;
                 }
             });
@@ -162,7 +162,7 @@ class SlotHookRegistryTest {
     private static SlotView createSlotView(ItemStack rawStack) {
         var container = new SimpleContainer(rawStack);
         Slot slot = new Slot(container, 0, 0, 0);
-        return new SlotView(new ScreenInfo(null), null, slot, rawStack, false);
+        return new SlotView(new ScreenInfo(null), new ScreenInfo(null), slot, rawStack, false);
     }
 
     private static final class RecordingHook implements SlotHook {
@@ -178,12 +178,12 @@ class SlotHookRegistryTest {
         }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             return true;
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             this.events.add("click:" + this.name);
             return this.result;
         }

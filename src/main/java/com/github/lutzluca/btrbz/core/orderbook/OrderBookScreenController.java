@@ -57,20 +57,20 @@ public class OrderBookScreenController {
         private Hook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             return ConfigManager.get().orderBook.enabled
-                && !slot.playerInventorySlot()
-                && slot.slotIndex() == CUSTOM_ORDER_BOOK_IDX
-                && OrderBookScreenController.this.isOrderSetupMenu(slot.currInfo());
+                && !view.playerInventorySlot()
+                && view.slotIdx() == CUSTOM_ORDER_BOOK_IDX
+                && OrderBookScreenController.this.isOrderSetupMenu(view.currInfo());
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext context) {
+        public ItemStack createDisplayStack(SlotRenderContext ctx) {
             return OrderBookScreenController.this.createOrderBookDisplayItem();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             var productNameInfo = OrderBookScreenController.this.productInfoProvider.getOpenedProductNameInfo();
             if (productNameInfo == null) {
                 Notifier.notifyPlayer(Notifier
@@ -81,7 +81,7 @@ public class OrderBookScreenController {
 
             var orders = OrderBookScreenController.this.bazaarData.getOrderLists(productNameInfo.productId());
             var orderBookScreen = new OrderBookScreen(
-                context.slot().currInfo().getScreen(),
+                ctx.slot().currInfo().getScreen(),
                 productNameInfo.productName(),
                 orders
             );

@@ -243,23 +243,23 @@ public class FlipHelper {
         private HelperItemHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             return ConfigManager.get().flipHelper.enabled
-                && !slot.playerInventorySlot()
-                && slot.slotIndex() == CUSTOM_HELPER_ITEM_SLOT_IDX
-                && slot.currInfo().inMenu(BazaarMenuType.OrderOptions)
+                && !view.playerInventorySlot()
+                && view.slotIdx() == CUSTOM_HELPER_ITEM_SLOT_IDX
+                && view.currInfo().inMenu(BazaarMenuType.OrderOptions)
                 && FlipHelper.this.potentialFlipProduct != null;
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext context) {
+        public ItemStack createDisplayStack(SlotRenderContext ctx) {
             return FlipHelper.this.getCachedHelperDisplayStack();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             var client = Minecraft.getInstance();
-            var gcsOpt = context.slot().currInfo().getGenericContainerScreen();
+            var gcsOpt = ctx.slot().currInfo().getGenericContainerScreen();
             if (gcsOpt.isEmpty()) {
                 return SlotClickResult.Pass;
             }
@@ -285,7 +285,7 @@ public class FlipHelper {
             interactionManager.handleInventoryMouseClick(
                 handler.containerId,
                 FLIP_ORDER_ITEM_SLOT_IDX,
-                context.button(),
+                ctx.button(),
                 ClickType.PICKUP,
                 player
             );
@@ -299,17 +299,17 @@ public class FlipHelper {
         private OrdersObserverHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             return ConfigManager.get().flipHelper.enabled
-                && slot.currInfo().inMenu(BazaarMenuType.Orders)
-                && !slot.playerInventorySlot();
+                && view.currInfo().inMenu(BazaarMenuType.Orders)
+                && !view.playerInventorySlot();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             var orderInfo = OrderInfoParser.parseOrderInfo(
-                context.slot().rawStack(),
-                context.slot().slotIndex()
+                ctx.slot().rawStack(),
+                ctx.slot().slotIdx()
             );
             if (orderInfo.isSuccess()) {
                 FlipHelper.this.onOrderClick(orderInfo.get());

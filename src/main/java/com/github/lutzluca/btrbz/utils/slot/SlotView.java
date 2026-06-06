@@ -3,17 +3,17 @@ package com.github.lutzluca.btrbz.utils.slot;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.NotNull;
 
 public record SlotView(
-    ScreenInfo currInfo,
-    @Nullable ScreenInfo prevInfo,
+    @NotNull ScreenInfo currInfo,
+    @NotNull ScreenInfo prevInfo,
     Slot slot,
     ItemStack rawStack,
     boolean playerInventorySlot
 ) {
 
-    public int slotIndex() {
+    public int slotIdx() {
         return this.slot.getContainerSlot();
     }
 }

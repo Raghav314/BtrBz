@@ -182,25 +182,25 @@ public class OrderProtectionManager {
         private ConfirmationHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
-            return slot.slotIndex() == CONFIRMATION_SLOT_INDEX && slot.currInfo().inMenu(
+        public boolean matches(SlotView view) {
+            return view.slotIdx() == CONFIRMATION_SLOT_INDEX && view.currInfo().inMenu(
                 BazaarMenuType.BuyOrderConfirmation,
                 BazaarMenuType.SellOfferConfirmation
             );
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext context) {
+        public ItemStack createDisplayStack(SlotRenderContext ctx) {
             if (ConfigManager.get().orderProtection.enabled) {
-                OrderProtectionManager.this.validateConfirmationStack(context.view().rawStack());
+                OrderProtectionManager.this.validateConfirmationStack(ctx.view().rawStack());
             }
 
-            return context.view().rawStack();
+            return ctx.view().rawStack();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
-            var stack = context.slot().rawStack();
+        public SlotClickResult onClick(SlotClickContext ctx) {
+            var stack = ctx.slot().rawStack();
             var cfg = ConfigManager.get().orderProtection;
             var pending = OrderProtectionManager.this.validationCache.get(stack);
             var validation = OrderProtectionManager.this.getValidationResult(stack)
@@ -215,7 +215,7 @@ public class OrderProtectionManager {
             }
 
             boolean isBlocked = validation.protect();
-            if (isBlocked && !context.modifiers().controlDown()) {
+            if (isBlocked && !ctx.modifiers().controlDown()) {
                 if (cfg.showChatMessage) {
                     Notifier.sendBlockedOrderMessage(validation);
                 }

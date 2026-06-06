@@ -391,23 +391,23 @@ public final class ProductInfoProvider {
         private ItemHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
+        public boolean matches(SlotView view) {
             var cfg = ConfigManager.get().productInfo;
             return cfg.enabled
                 && cfg.itemClickEnabled
                 && ProductInfoProvider.this.openedProductNameInfo != null
-                && !slot.playerInventorySlot()
-                && slot.slotIndex() == CUSTOM_ITEM_IDX
-                && slot.currInfo().inMenu(BazaarMenuType.Item);
+                && !view.playerInventorySlot()
+                && view.slotIdx() == CUSTOM_ITEM_IDX
+                && view.currInfo().inMenu(BazaarMenuType.Item);
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext context) {
+        public ItemStack createDisplayStack(SlotRenderContext ctx) {
             return ProductInfoProvider.this.createProductInfoItem();
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
             var cfg = ConfigManager.get().productInfo;
             ProductInfoProvider.this.confirmAndOpen(
                 cfg.site.format(ProductInfoProvider.this.openedProductNameInfo.productId)
@@ -421,18 +421,18 @@ public final class ProductInfoProvider {
         private CtrlShiftHook() { }
 
         @Override
-        public boolean matches(SlotView slot) {
-            return !slot.rawStack().isEmpty() && ProductInfoProvider.this.shouldApplyCtrlShiftClick(slot.rawStack());
+        public boolean matches(SlotView view) {
+            return !view.rawStack().isEmpty() && ProductInfoProvider.this.shouldApplyCtrlShiftClick(view.rawStack());
         }
 
         @Override
-        public SlotClickResult onClick(SlotClickContext context) {
-            if (!context.modifiers().controlDown() || !context.modifiers().shiftDown()) {
+        public SlotClickResult onClick(SlotClickContext ctx) {
+            if (!ctx.modifiers().controlDown() || !ctx.modifiers().shiftDown()) {
                 return SlotClickResult.Pass;
             }
 
             var cfg = ConfigManager.get().productInfo;
-            var stack = context.slot().rawStack();
+            var stack = ctx.slot().rawStack();
             var name = stack.getHoverName().getString();
             var id = ProductInfoProvider.this.resolveProductId(stack, name);
             if (id.isEmpty()) {
