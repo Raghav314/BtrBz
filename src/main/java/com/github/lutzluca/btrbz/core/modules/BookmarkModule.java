@@ -211,10 +211,6 @@ public class BookmarkModule extends Module<BookMarkConfig> {
                 return null;
             }
 
-            if (rawStack.get(BtrBz.BOOKMARKED) != null) {
-                return rawStack;
-            }
-
             String productName = rawStack.getHoverName().getString();
             if (BookmarkModule.this.context().bazaarData().nameToId(productName).isEmpty()) {
                 return null;
