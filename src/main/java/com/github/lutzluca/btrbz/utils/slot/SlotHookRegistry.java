@@ -14,15 +14,15 @@ public final class SlotHookRegistry {
         HOOKS.add(hook);
     }
 
-    public static ItemStack getDisplayStack(SlotRenderContext ctx) {
+    public static ItemStack replaceItem(SlotRenderContext ctx) {
         for (SlotHook hook : HOOKS) {
             if (!hook.matches(ctx.view())) {
                 continue;
             }
 
-            var displayStack = hook.createDisplayStack(ctx);
-            if (displayStack != null) {
-                return displayStack;
+            var replacement = hook.replaceItem(ctx);
+            if (replacement != null) {
+                return replacement;
             }
         }
 

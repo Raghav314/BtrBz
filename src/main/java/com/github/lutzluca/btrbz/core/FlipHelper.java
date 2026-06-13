@@ -1,6 +1,7 @@
 package com.github.lutzluca.btrbz.core;
 
 import com.github.lutzluca.btrbz.BtrBz;
+import com.github.lutzluca.btrbz.compat.CatharsisSupport;
 import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import com.github.lutzluca.btrbz.core.config.ConfigScreen;
 import com.github.lutzluca.btrbz.core.config.ConfigScreen.OptionGrouping;
@@ -49,6 +50,7 @@ public class FlipHelper {
     private TrackedProduct potentialFlipProduct = null;
     private boolean pendingFlip = false;
     private CachedHelperDisplay cachedHelperDisplay = null;
+    private ItemStack flipHelperItem = null;
 
     public FlipHelper(BazaarData bazaarData) {
         this.bazaarData = bazaarData;
@@ -81,10 +83,22 @@ public class FlipHelper {
         SlotHookRegistry.register(new OrderProductObserverHook());
     }
 
-    private ItemStack createHelperDisplayStack(double price) {
+
+
+    private ItemStack createFlipHelperItem() {
+        if (this.flipHelperItem == null) {
+            this.flipHelperItem = new ItemStack(Items.NETHER_STAR);
+            CatharsisSupport.disableCatharsisModifications(this.flipHelperItem);
+        }
+
+        return this.flipHelperItem;
+    }
+
+    private ItemStack getFlipHelperItem(double price) {
         var formatted = Utils.formatDecimal(Math.max(price, .1), 1, true);
 
-        var customHelperItem = new ItemStack(Items.NETHER_STAR);
+        var customHelperItem = this.createFlipHelperItem();
+
         customHelperItem.set(
             DataComponents.CUSTOM_NAME,
             Component
@@ -116,11 +130,11 @@ public class FlipHelper {
         if (this.cachedHelperDisplay != null
             && this.cachedHelperDisplay.productName().equals(productName)
             && Double.compare(this.cachedHelperDisplay.displayPrice(), displayPrice) == 0) {
-            return this.cachedHelperDisplay.display().copy();
+            return this.createFlipHelperItem();
         }
 
-        var display = this.createHelperDisplayStack(displayPrice);
-        this.cachedHelperDisplay = new CachedHelperDisplay(productName, displayPrice, display.copy());
+        var display = this.getFlipHelperItem(displayPrice);
+        this.cachedHelperDisplay = new CachedHelperDisplay(productName, displayPrice);
         return display;
     }
 
@@ -252,7 +266,7 @@ public class FlipHelper {
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext ctx) {
+        public ItemStack replaceItem(SlotRenderContext ctx) {
             return FlipHelper.this.getCachedHelperDisplayStack();
         }
 
@@ -319,7 +333,7 @@ public class FlipHelper {
         }
     }
 
-    private record CachedHelperDisplay(String productName, double displayPrice, ItemStack display) { }
+    private record CachedHelperDisplay(String productName, double displayPrice) { }
 
     private record FlipEntry(String productName, double pricePerUnit) { }
 

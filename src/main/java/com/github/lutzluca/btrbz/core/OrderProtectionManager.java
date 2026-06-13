@@ -189,17 +189,13 @@ public class OrderProtectionManager {
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext ctx) {
-            if (ConfigManager.get().orderProtection.enabled) {
-                OrderProtectionManager.this.validateConfirmationStack(ctx.view().rawStack());
-            }
-
-            return ctx.view().rawStack();
-        }
-
-        @Override
         public SlotClickResult onClick(SlotClickContext ctx) {
             var stack = ctx.view().rawStack();
+
+            if (ConfigManager.get().orderProtection.enabled) {
+                OrderProtectionManager.this.validateConfirmationStack(stack);
+            }
+
             var cfg = ConfigManager.get().orderProtection;
             var pending = OrderProtectionManager.this.validationCache.get(stack);
             var validation = OrderProtectionManager.this.getValidationResult(stack)

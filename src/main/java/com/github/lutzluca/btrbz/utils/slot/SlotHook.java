@@ -15,7 +15,7 @@ public interface SlotHook {
 
     boolean matches(SlotView view);
 
-    default @Nullable ItemStack createDisplayStack(SlotRenderContext ctx) {
+    default @Nullable ItemStack replaceItem(SlotRenderContext ctx) {
         return null;
     }
 

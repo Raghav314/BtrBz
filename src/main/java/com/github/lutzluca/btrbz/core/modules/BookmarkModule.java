@@ -201,7 +201,7 @@ public class BookmarkModule extends Module<BookMarkConfig> {
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext ctx) {
+        public ItemStack replaceItem(SlotRenderContext ctx) {
             if (!BookmarkModule.this.configState.enabled) {
                 return null;
             }

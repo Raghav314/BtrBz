@@ -128,7 +128,10 @@ public class BazaarOrderActions {
 
             var isCancelOrderSlot = screenInfo.getGenericContainerScreen()
                 .map(screen -> screen instanceof AbstractContainerScreenAccessor accessor ? accessor.getHoveredSlot() : null)
-                .filter(BazaarOrderActions.this::isCancelOrderSlot)
+                .filter(slot -> BazaarOrderActions.this.isCancelOrderSlot(
+                    slot.getContainerSlot(),
+                    slot.getItem()
+                ))
                 .isPresent();
 
             if (!isCancelOrderSlot) {
@@ -192,12 +195,9 @@ public class BazaarOrderActions {
             .orElse(-1);
     }
 
-    private boolean isCancelOrderSlot(@Nullable net.minecraft.world.inventory.Slot slot) {
-        return slot != null && slot.getContainerSlot() == CANCEL_ORDER_SLOT && slot
-            .getItem()
-            .getHoverName()
-            .getString()
-            .equals("Cancel Order");
+    private boolean isCancelOrderSlot(int slotIdx, ItemStack stack) {
+        return slotIdx == CANCEL_ORDER_SLOT
+            && stack.getHoverName().getString().equals("Cancel Order");
     }
 
     public final class CancelOrderHook implements SlotHook {
@@ -211,7 +211,7 @@ public class BazaarOrderActions {
                 && !view.playerInventorySlot()
                 && view.currInfo().inMenu(BazaarMenuType.OrderOptions)
                 && view.prevInfo().inMenu(BazaarMenuType.Orders)
-                && BazaarOrderActions.this.isCancelOrderSlot(view.slot());
+                && BazaarOrderActions.this.isCancelOrderSlot(view.slotIdx(),view.rawStack());
         }
 
         @Override
@@ -257,7 +257,7 @@ public class BazaarOrderActions {
         }
 
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext ctx) {
+        public ItemStack replaceItem(SlotRenderContext ctx) {
             return BazaarOrderActions.this.lastCancelledBuyOrder.displayItem().copy();
         }
 

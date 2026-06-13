@@ -8,9 +8,7 @@ import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ClickType;
-import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.server.Bootstrap;
@@ -54,7 +52,7 @@ class SlotHookRegistryTest {
                 }
 
                 @Override
-                public ItemStack createDisplayStack(SlotRenderContext ignored) {
+                public ItemStack replaceItem(SlotRenderContext ignored) {
                     return firstDisplay;
                 }
             });
@@ -65,12 +63,12 @@ class SlotHookRegistryTest {
                 }
 
                 @Override
-                public ItemStack createDisplayStack(SlotRenderContext ignored) {
+                public ItemStack replaceItem(SlotRenderContext ignored) {
                     return secondDisplay;
                 }
             });
 
-            assertSame(firstDisplay, SlotHookRegistry.getDisplayStack(context));
+            assertSame(firstDisplay, SlotHookRegistry.replaceItem(context));
         }
 
         @Test
@@ -85,7 +83,7 @@ class SlotHookRegistryTest {
                 }
             });
 
-            assertSame(rawStack, SlotHookRegistry.getDisplayStack(context));
+            assertSame(rawStack, SlotHookRegistry.replaceItem(context));
         }
     }
 
@@ -160,9 +158,7 @@ class SlotHookRegistryTest {
     }
 
     private static SlotView createSlotView(ItemStack rawStack) {
-        var container = new SimpleContainer(rawStack);
-        Slot slot = new Slot(container, 0, 0, 0);
-        return new SlotView(new ScreenInfo(null), new ScreenInfo(null), slot, rawStack, false);
+        return new SlotView(new ScreenInfo(null), new ScreenInfo(null), rawStack, 0, false);
     }
 
     private static final class RecordingHook implements SlotHook {

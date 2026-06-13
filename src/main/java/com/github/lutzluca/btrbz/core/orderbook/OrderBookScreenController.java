@@ -1,5 +1,6 @@
 package com.github.lutzluca.btrbz.core.orderbook;
 
+import com.github.lutzluca.btrbz.compat.CatharsisSupport;
 import com.github.lutzluca.btrbz.core.ProductInfoProvider;
 import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.core.config.ConfigManager;
@@ -14,6 +15,7 @@ import com.github.lutzluca.btrbz.utils.slot.SlotRenderContext;
 import com.github.lutzluca.btrbz.utils.slot.SlotView;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionGroup;
+import lombok.extern.slf4j.Slf4j;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -21,6 +23,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.BazaarMenuType;
 
+@Slf4j
 public class OrderBookScreenController {
 
     private static final int CUSTOM_ORDER_BOOK_IDX = 8;
@@ -34,6 +37,8 @@ public class OrderBookScreenController {
     }
 
     public final class OrderBookButtonHook implements SlotHook {
+
+        private ItemStack orderBookItem = null;
 
         private OrderBookButtonHook() { }
         @Override
@@ -49,15 +54,30 @@ public class OrderBookScreenController {
                 );
         }
 
-        @Override
-        public ItemStack createDisplayStack(SlotRenderContext ctx) {
+        private ItemStack createOrderBookItem() {
             var book = new ItemStack(Items.BOOK);
+
+            CatharsisSupport.disableCatharsisModifications(book);
+
             book.set(
                 DataComponents.CUSTOM_NAME,
                 Component.literal("Open Order Book").withStyle(style -> style.withItalic(false))
             );
-
             return book;
+        }
+
+
+        private ItemStack getOrderBookItem() {
+            if (this.orderBookItem == null) {
+                this.orderBookItem = this.createOrderBookItem();
+            }
+
+            return this.orderBookItem;
+        }
+
+        @Override
+        public ItemStack replaceItem(SlotRenderContext ctx) {
+            return this.getOrderBookItem();
         }
 
         @Override

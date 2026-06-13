@@ -1,5 +1,6 @@
 package com.github.lutzluca.btrbz.core;
 
+import com.github.lutzluca.btrbz.compat.CatharsisSupport;
 import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import com.github.lutzluca.btrbz.data.BazaarData;
 import com.github.lutzluca.btrbz.core.config.ConfigScreen;
@@ -165,33 +166,6 @@ public final class ProductInfoProvider {
         SlotHookRegistry.register(new ProductLookupHook());
     }
 
-    private ItemStack createProductInfoItem() {
-        var cfg = ConfigManager.get().productInfo;
-        var item = new ItemStack(Items.PAPER);
-        item.set(
-            DataComponents.CUSTOM_NAME,
-            Component
-                .literal("Product Info")
-                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
-                .withStyle(style -> style.withItalic(false))
-        );
-
-        var loreLines = Stream.of(
-            Component.literal("View detailed Bazaar statistics").withStyle(ChatFormatting.GRAY),
-            Component.literal("and live market data for this item.").withStyle(ChatFormatting.GRAY),
-            Component.empty(),
-            Component
-                .literal("➤ Click to open ")
-                .withStyle(ChatFormatting.DARK_GRAY)
-                .withStyle(style -> style.withItalic(false))
-                .append(Component
-                    .literal(cfg.site.displayName())
-                    .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
-        ).<Component>map(line -> line.withStyle(style -> style.withItalic(false))).toList();
-
-        item.set(DataComponents.LORE, new ItemLore(loreLines));
-        return item;
-    }
 
     private void registerTooltipDisplay() {
         ItemTooltipCallback.EVENT.register((stack, ctx, type, lines) -> {
@@ -387,6 +361,7 @@ public final class ProductInfoProvider {
     private record CachedPrice(@Nullable Double sellOfferPrice, @Nullable Double buyOrderPrice) { }
 
     public final class InfoSiteButtonHook implements SlotHook {
+        private ItemStack productInfoItem = null;
 
         private InfoSiteButtonHook() { }
 
@@ -401,9 +376,49 @@ public final class ProductInfoProvider {
                 && view.currInfo().inMenu(BazaarMenuType.Item);
         }
 
+
+        private ItemStack getProductInfoItem() {
+            if (this.productInfoItem == null) {
+                this.productInfoItem = this.createProductInfoItem();
+            }
+
+            return this.productInfoItem;
+        }
+
+        private ItemStack createProductInfoItem() {
+            var cfg = ConfigManager.get().productInfo;
+            var item = new ItemStack(Items.PAPER);
+
+            CatharsisSupport.disableCatharsisModifications(item);
+
+            item.set(
+                DataComponents.CUSTOM_NAME,
+                Component
+                    .literal("Product Info")
+                    .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
+                    .withStyle(style -> style.withItalic(false))
+            );
+
+            var loreLines = Stream.of(
+                Component.literal("View detailed Bazaar statistics").withStyle(ChatFormatting.GRAY),
+                Component.literal("and live market data for this item.").withStyle(ChatFormatting.GRAY),
+                Component.empty(),
+                Component
+                    .literal("➤ Click to open ")
+                    .withStyle(ChatFormatting.DARK_GRAY)
+                    .withStyle(style -> style.withItalic(false))
+                    .append(Component
+                        .literal(cfg.site.displayName())
+                        .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
+            ).<Component>map(line -> line.withStyle(style -> style.withItalic(false))).toList();
+
+            item.set(DataComponents.LORE, new ItemLore(loreLines));
+            return item;
+        }
+
         @Override
-        public ItemStack createDisplayStack(SlotRenderContext ctx) {
-            return ProductInfoProvider.this.createProductInfoItem();
+        public ItemStack replaceItem(SlotRenderContext ctx) {
+            return this.getProductInfoItem();
         }
 
         @Override
@@ -422,11 +437,15 @@ public final class ProductInfoProvider {
 
         @Override
         public boolean matches(SlotView view) {
-            return !view.rawStack().isEmpty() && ProductInfoProvider.this.shouldApplyCtrlShiftClick(view.rawStack());
+            return !view.rawStack().isEmpty();
         }
 
         @Override
         public SlotClickResult onClick(SlotClickContext ctx) {
+            if (!ProductInfoProvider.this.shouldApplyCtrlShiftClick(ctx.view().rawStack())) {
+                return SlotClickResult.Pass;
+            }
+
             if (!ctx.modifiers().controlDown() || !ctx.modifiers().shiftDown()) {
                 return SlotClickResult.Pass;
             }
