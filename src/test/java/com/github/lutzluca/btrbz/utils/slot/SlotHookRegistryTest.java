@@ -162,7 +162,7 @@ class SlotHookRegistryTest {
     private static SlotView createSlotView(ItemStack rawStack) {
         var container = new SimpleContainer(rawStack);
         Slot slot = new Slot(container, 0, 0, 0);
-        return new SlotView(new ScreenInfo(null), new ScreenInfo(null), slot, rawStack, false);
+        return new SlotView(new ScreenInfo(null), new ScreenInfo(null), slot, rawStack);
     }
 
     private static final class RecordingHook implements SlotHook {

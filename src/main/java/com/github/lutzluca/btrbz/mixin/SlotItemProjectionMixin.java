@@ -1,6 +1,7 @@
 package com.github.lutzluca.btrbz.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -20,18 +21,20 @@ public abstract class SlotItemProjectionMixin {
         }
 
         var slot = (Slot) (Object) this;
-        if (!this.isCurrentMenuSlot(slot)) {
+        if (!this.btrbz$isCurrentMenuSlot(slot)) {
             return;
         }
 
-        var rawStack = cir.getReturnValue();
-        var displayStack = VirtualSlotProjection.project(slot, rawStack);
-        if (displayStack != rawStack) {
-            cir.setReturnValue(displayStack);
+        var raw = cir.getReturnValue();
+        var proj = VirtualSlotProjection.project(slot, raw);
+
+        if (proj != raw) {
+            cir.setReturnValue(proj);
         }
     }
 
-    private boolean isCurrentMenuSlot(Slot slot) {
+    @Unique
+    private boolean btrbz$isCurrentMenuSlot(Slot slot) {
         var screen = Minecraft.getInstance().screen;
         return screen instanceof AbstractContainerScreen<?> containerScreen
             && containerScreen.getMenu().slots.contains(slot);

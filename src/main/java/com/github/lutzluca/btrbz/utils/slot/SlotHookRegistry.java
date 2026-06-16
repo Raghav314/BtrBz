@@ -15,23 +15,27 @@ public final class SlotHookRegistry {
     }
 
     public static ItemStack getDisplayStack(SlotRenderContext ctx) {
+        var view = ctx.view();
+        
         for (SlotHook hook : HOOKS) {
-            if (!hook.matches(ctx.view())) {
+            if (!hook.matches(view)) {
                 continue;
             }
 
-            var displayStack = hook.createDisplayStack(ctx);
-            if (displayStack != null) {
-                return displayStack;
+            var display = hook.createDisplayStack(ctx);
+            if (display != null) {
+                return display;
             }
         }
 
-        return ctx.view().rawStack();
+        return view.rawStack();
     }
 
     public static boolean handleClick(SlotClickContext ctx) {
+        var view = ctx.view();
+
         for (SlotHook hook : HOOKS) {
-            if (!hook.matches(ctx.view())) {
+            if (!hook.matches(view)) {
                 continue;
             }
 

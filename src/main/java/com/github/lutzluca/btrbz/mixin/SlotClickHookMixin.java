@@ -1,6 +1,7 @@
 package com.github.lutzluca.btrbz.mixin;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -32,21 +33,22 @@ public abstract class SlotClickHookMixin {
             return;
         }
 
-        if (this.handleSlotHook(slot, button, type)) {
+        if (this.btrbz$handleSlotHook(slot, button, type)) {
             ci.cancel();
         }
     }
 
-    private boolean handleSlotHook(Slot slot, int button, ClickType type) {
-        var rawStack = VirtualSlotProjection.withProjectionSuppressed(slot::getItem);
-        var context = new SlotClickContext(
-            VirtualSlotProjection.createSlotView(slot, rawStack),
+    @Unique
+    private boolean btrbz$handleSlotHook(Slot slot, int button, ClickType type) {
+        var raw = VirtualSlotProjection.withProjectionSuppressed(slot::getItem);
+
+        var ctx = new SlotClickContext(
+            VirtualSlotProjection.createSlotView(slot, raw),
             type,
             button,
             SlotInputModifiers.from(Minecraft.getInstance())
         );
 
-        // ClickType reflects the final client action and may already be rewritten by other mods.
-        return SlotHookRegistry.handleClick(context);
+        return SlotHookRegistry.handleClick(ctx);
     }
 }

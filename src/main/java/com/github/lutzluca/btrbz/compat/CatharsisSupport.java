@@ -7,7 +7,8 @@ import net.minecraft.world.item.ItemStack;
 @Slf4j
 public final class CatharsisSupport {
 
-    // https://github.com/meowdding/catharsis/blob/development/docs/mod_compatibility/imc.md
+    // implementation stripped version based on https://github.com/meowdding/catharsis/blob/development/docs/mod_compatibility/imc.md
+    // only methods actually used here are implemented. if other IMC methods are needed, refer to the doc.
 
     private static BiConsumer<ItemStack, Boolean> disabledConsumer = (stack, disabled) -> {};
 

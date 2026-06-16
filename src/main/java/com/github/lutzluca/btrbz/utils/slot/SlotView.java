@@ -1,19 +1,23 @@
 package com.github.lutzluca.btrbz.utils.slot;
 
-import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
+import org.jetbrains.annotations.NotNull;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import org.jetbrains.annotations.NotNull;
+import com.github.lutzluca.btrbz.utils.GameUtils;
+import com.github.lutzluca.btrbz.utils.ScreenInfoHelper.ScreenInfo;
 
 public record SlotView(
     @NotNull ScreenInfo currInfo,
     @NotNull ScreenInfo prevInfo,
     @NotNull Slot slot,
-    @NotNull ItemStack rawStack,
-    boolean playerInventorySlot
+    @NotNull ItemStack rawStack
 ) {
 
     public int slotIdx() {
         return this.slot.getContainerSlot();
+    }
+
+    public boolean playerInventorySlot() {
+        return GameUtils.isPlayerInventorySlot(this.slot);
     }
 }
