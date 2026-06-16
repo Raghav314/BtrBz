@@ -14,6 +14,7 @@ import com.github.lutzluca.btrbz.BtrBz;
 import com.github.lutzluca.btrbz.core.ModuleManager;
 import com.github.lutzluca.btrbz.utils.GameUtils;
 import com.github.lutzluca.btrbz.utils.ScreenInfoHelper;
+import com.github.lutzluca.btrbz.utils.slot.VirtualSlotProjection;
 
 @Mixin(AbstractContainerScreen.class)
 public abstract class AbstractContainerScreenMixin {
@@ -55,7 +56,9 @@ public abstract class AbstractContainerScreenMixin {
         if (!ScreenInfoHelper.inMenu(ScreenInfoHelper.BazaarMenuType.Orders)) {
             return;
         }
-        if (slot.getItem().isEmpty() || GameUtils.isPlayerInventorySlot(slot)) {
+
+        var rawStack = VirtualSlotProjection.withProjectionSuppressed(slot::getItem);
+        if (rawStack.isEmpty() || GameUtils.isPlayerInventorySlot(slot)) {
             return;
         }
 

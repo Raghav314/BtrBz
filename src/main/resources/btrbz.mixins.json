@@ -9,7 +9,8 @@
         "DrawContextMixin",
         "AbstractContainerScreenAccessor",
         "AbstractContainerScreenMixin",
-        "VirtualSlotScreenMixin",
+        "SlotItemProjectionMixin",
+        "SlotClickHookMixin",
         "MinecraftClientMixin",
         "ContainerEventHandlerMixin",
         "SkyBlockBazaarReplyAccessor"
