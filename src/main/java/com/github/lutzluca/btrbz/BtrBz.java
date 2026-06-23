@@ -173,11 +173,11 @@ public class BtrBz implements ClientModInitializer {
         );
 
         ClientReceiveMessageEvents.GAME.register((message, overlay) ->
-            MESSAGE_DISPATCHER.handleChatMessage(ChatFormatting.stripFormatting(message.getString()))
+            MESSAGE_DISPATCHER.handleChatMessage(GameUtils.stripFormattingCodes(message.getString()))
         );
 
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> {
-            var rawMsg = ChatFormatting.stripFormatting(message.getString());
+            var rawMsg = GameUtils.stripFormattingCodes(message.getString());
             if (overlay || !rawMsg.startsWith("[Bazaar]") || !rawMsg.endsWith("was filled!")) {
                 return message;
             }

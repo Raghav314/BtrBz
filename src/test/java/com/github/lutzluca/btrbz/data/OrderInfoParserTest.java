@@ -269,6 +269,25 @@ class OrderInfoParserTest {
         }
 
         @Test
+        void parsesFormattedOrderScreenItem() {
+            var result = OrderInfoParser.parseOrderInfo("§aBUY §d§lBank III", orderLore(
+                "§7Worth §6343.6 coins",
+                "",
+                "§7Order amount: §a4x",
+                "",
+                "§7Price per unit: §685.9 coins"
+            ), 17);
+
+            assertTrue(result.isSuccess());
+            var info = assertInstanceOf(OrderInfo.UnfilledOrderInfo.class, result.get());
+            assertEquals("Bank III", info.productName());
+            assertEquals(OrderType.Buy, info.type());
+            assertEquals(4, info.volume());
+            assertEquals(85.9, info.pricePerUnit());
+            assertEquals(17, info.slotIdx());
+        }
+
+        @Test
         void failsWhenRequiredFieldsAreMissing() {
             assertTrue(OrderInfoParser.parseOrderInfo("BUY Heat Core", orderLore(
                 "Worth 10,400,000 coins",
@@ -296,6 +315,23 @@ class OrderInfoParserTest {
             assertEquals(12, result.get().volume());
             assertEquals(35_926.9, result.get().pricePerUnit());
             assertEquals(431_123.0, result.get().total());
+        }
+
+        @Test
+        void parsesFormattedBuyOrderConfirmItem() {
+            var result = OrderInfoParser.parseSetOrderItem("§aBuy Order", confirmLore(
+                "§8Bazaar",
+                "§7Price per unit: §685.9 coins",
+                "§7Order: §a4§7x §d§lBank III",
+                "§7Total price: §6343.6 coins"
+            ));
+
+            assertTrue(result.isSuccess());
+            assertEquals("Bank III", result.get().productName());
+            assertEquals(OrderType.Buy, result.get().type());
+            assertEquals(4, result.get().volume());
+            assertEquals(85.9, result.get().pricePerUnit());
+            assertEquals(343.6, result.get().total());
         }
 
         @Test

@@ -43,6 +43,15 @@ public final class GameUtils {
 
     private GameUtils() { }
 
+    public static String stripFormattingCodes(String text) {
+        if (text == null) {
+            return "";
+        }
+
+        var stripped = ChatFormatting.stripFormatting(text);
+        return stripped == null ? "" : stripped;
+    }
+
     public static boolean orderScreenNonOrderItemsFilter(@Nullable ItemStack stack) {
         if (stack == null || stack.isEmpty()) { return true; }
 
@@ -78,7 +87,7 @@ public final class GameUtils {
                 text = owner;
             }
 
-            text = text.replaceAll("§.", "").trim();
+            text = stripFormattingCodes(text).trim();
 
             if (!text.isBlank()) { lines.add(text); }
         }

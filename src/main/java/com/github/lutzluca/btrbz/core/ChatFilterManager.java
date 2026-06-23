@@ -2,12 +2,12 @@ package com.github.lutzluca.btrbz.core;
 
 import com.github.lutzluca.btrbz.core.config.ConfigManager;
 import com.github.lutzluca.btrbz.core.config.ConfigScreen;
+import com.github.lutzluca.btrbz.utils.GameUtils;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
 import dev.isxander.yacl3.api.OptionGroup;
 import java.util.List;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
 public class ChatFilterManager {
@@ -29,7 +29,7 @@ public class ChatFilterManager {
                 return true;
             }
 
-            String content = ChatFormatting.stripFormatting(message.getString());
+            String content = GameUtils.stripFormattingCodes(message.getString());
             return TRANSIENT_MESSAGES.stream().noneMatch(content::startsWith);
         });
     }

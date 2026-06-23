@@ -11,6 +11,7 @@ import com.github.lutzluca.btrbz.data.OrderModels.OrderInfo.FilledOrderInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.OrderInfo.UnfilledOrderInfo;
 import com.github.lutzluca.btrbz.data.OrderModels.OrderType;
 import com.github.lutzluca.btrbz.data.OrderModels.OutstandingOrderInfo;
+import com.github.lutzluca.btrbz.utils.GameUtils;
 import com.github.lutzluca.btrbz.utils.Utils;
 import io.vavr.control.Try;
 import java.util.ArrayList;
@@ -205,7 +206,7 @@ public final class OrderInfoParser {
         // You have {unclaimed} of ... to claim
         // ...
         return Try.of(() -> {
-            var orderInfo = title.split(" ", 2);
+            var orderInfo = GameUtils.stripFormattingCodes(title).split(" ", 2);
             if (orderInfo.length != 2) {
                 throw new IllegalArgumentException(
                     "Title line of item does not follow the pattern '<type> <productName>'");
@@ -261,7 +262,7 @@ public final class OrderInfoParser {
             int unclaimed = 0;
 
             for (String rawLine : lore) {
-                String line = rawLine.trim();
+                String line = GameUtils.stripFormattingCodes(rawLine).trim();
                 if (line.isEmpty()) {
                     continue;
                 }
@@ -341,7 +342,7 @@ public final class OrderInfoParser {
         // Total price / You earn: {total} coins.
         // ...
         return Try.of(() -> {
-            var type = switch (title) {
+            var type = switch (GameUtils.stripFormattingCodes(title)) {
                 case "Sell Offer" -> OrderType.Sell;
                 case "Buy Order" -> OrderType.Buy;
                 default -> throw new IllegalArgumentException("Unknown confirm title: " + title);
@@ -353,7 +354,7 @@ public final class OrderInfoParser {
             Double total = null;
 
             for (String rawLine : lore) {
-                String line = rawLine.trim();
+                String line = GameUtils.stripFormattingCodes(rawLine).trim();
                 if (line.isEmpty()) {
                     continue;
                 }
