@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.7.3-alpha] - 2026-06-24
+
+### Fixed
+
+- Fixed Order Preset affordability and item counts using an incorrect purse value after scoreboard formatting cleanup stopped removing Hypixel's nonstandard `§j` owner token
+
 ## [0.7.2-alpha] - 2026-06-23
 
 ### Fixed
