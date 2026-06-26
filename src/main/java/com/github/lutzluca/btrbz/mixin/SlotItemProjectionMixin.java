@@ -16,7 +16,7 @@ public abstract class SlotItemProjectionMixin {
 
     @Inject(method = "getItem", at = @At("RETURN"), cancellable = true)
     private void projectItem(CallbackInfoReturnable<ItemStack> cir) {
-        if (VirtualSlotProjection.isProjectionSuppressed()) {
+        if (!Minecraft.getInstance().isSameThread()) {
             return;
         }
 
@@ -36,7 +36,14 @@ public abstract class SlotItemProjectionMixin {
     @Unique
     private boolean btrbz$isCurrentMenuSlot(Slot slot) {
         var screen = Minecraft.getInstance().screen;
-        return screen instanceof AbstractContainerScreen<?> containerScreen
-            && containerScreen.getMenu().slots.contains(slot);
+
+        if (!(screen instanceof AbstractContainerScreen<?> containerScreen)) {
+            return false;
+        }
+
+        var slots = containerScreen.getMenu().slots;
+        int idx = slot.index;
+
+        return idx < slots.size() && slots.get(idx) == slot;
     }
 }

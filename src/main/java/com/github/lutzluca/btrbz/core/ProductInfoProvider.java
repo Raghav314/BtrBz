@@ -26,7 +26,6 @@ import java.net.URI;
 import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
@@ -65,12 +64,18 @@ public final class ProductInfoProvider {
 
     private final BazaarData bazaarData;
     private final PriceCache priceCache;
+    private final ProductIdCache productIdCache;
+
+    private @Nullable ItemStack cachedProductInfoItem = null;
+    private @Nullable InfoProviderSite cachedProductInfoSite = null;
+
     @Getter
     private @Nullable ProductNameInfo openedProductNameInfo;
 
     public ProductInfoProvider(BazaarData bazaarData) {
         this.bazaarData = bazaarData;
         this.priceCache = new PriceCache();
+        this.productIdCache = new ProductIdCache();
         this.registerProductInfoListener();
         this.registerSlotHooks();
         this.registerTooltipDisplay();
@@ -167,6 +172,11 @@ public final class ProductInfoProvider {
 
     private ItemStack createProductInfoItem() {
         var cfg = ConfigManager.get().productInfo;
+
+        if (this.cachedProductInfoItem != null && this.cachedProductInfoSite == cfg.site) {
+            return this.cachedProductInfoItem.copy();
+        }
+
         var item = new ItemStack(Items.PAPER);
         item.set(
             DataComponents.CUSTOM_NAME,
@@ -190,7 +200,10 @@ public final class ProductInfoProvider {
         ).<Component>map(line -> line.withStyle(style -> style.withItalic(false))).toList();
 
         item.set(DataComponents.LORE, new ItemLore(loreLines));
-        return item;
+
+        this.cachedProductInfoItem = item;
+        this.cachedProductInfoSite = cfg.site;
+        return this.cachedProductInfoItem.copy();
     }
 
     private void registerTooltipDisplay() {
@@ -268,30 +281,37 @@ public final class ProductInfoProvider {
             return false;
         }
 
-        var productName = stack.getHoverName().getString();
-        if (this.resolveProductId(stack, productName).isEmpty()) {
+        boolean inBazaarMainOrItem = ScreenInfoHelper.inMenu(BazaarMenuType.Main, BazaarMenuType.Item);
+        if (!inBazaarMainOrItem && !cfg.showOutsideBazaar && !ScreenInfoHelper.inBazaar()) {
             return false;
         }
 
-        if (ScreenInfoHelper.inMenu(BazaarMenuType.Main, BazaarMenuType.Item)) {
+        if (this.productIdCache.get(stack).isEmpty()) {
+            return false;
+        }
+
+        if (inBazaarMainOrItem) {
             return this.isStackInPlayerInventory(stack);
         }
 
-        if (cfg.showOutsideBazaar) {
-            return true;
-        }
-
-        return ScreenInfoHelper.inBazaar();
+        return true;
     }
 
     private boolean isStackInPlayerInventory(ItemStack stack) {
         // NOTE: reference equality is intentional here
         // noinspection DataFlowIssue
-        return Try
-            .of(() -> StreamSupport
-                .stream(Minecraft.getInstance().player.getInventory().spliterator(), false)
-                .anyMatch(playerStack -> playerStack == stack))
-            .getOrElse(false);
+        var player = Minecraft.getInstance().player;
+        if (player == null) {
+            return false;
+        }
+
+        for (var playerStack : player.getInventory()) {
+            if (playerStack == stack) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void confirmAndOpen(String link) {
@@ -313,32 +333,6 @@ public final class ProductInfoProvider {
                 client.setScreen(prev != null ? prev.getScreen() : null);
             }, link, true
         ));
-    }
-
-    private Optional<String> resolveProductId(ItemStack stack, String name) {
-        var direct = this.bazaarData.nameToId(name);
-        if (direct.isPresent()) {
-            return direct;
-        }
-
-        if ("Enchanted Book".equals(name)) {
-            var ids = OrderInfoParser
-                .getLore(stack)
-                .stream()
-                .map(this.bazaarData::nameToId)
-                .flatMap(Optional::stream)
-                .distinct()
-                .toList();
-
-            return ids.size() == 1 ? Optional.of(ids.getFirst()) : Optional.empty();
-        }
-
-        var delimiter = name.lastIndexOf(' ');
-        if (delimiter == -1 || !Utils.isValidRomanNumeral(name.substring(delimiter).trim())) {
-            return Optional.empty();
-        }
-
-        return this.bazaarData.nameToId(name.substring(0, delimiter).trim());
     }
 
     public enum InfoProviderSite {
@@ -429,10 +423,9 @@ public final class ProductInfoProvider {
 
             var cfg = ConfigManager.get().productInfo;
             var stack = ctx.view().rawStack();
-            var name = stack.getHoverName().getString();
-            var id = ProductInfoProvider.this.resolveProductId(stack, name);
+            var id = ProductInfoProvider.this.productIdCache.get(stack);
             if (id.isEmpty()) {
-                log.warn("No product id found for {}", name);
+                log.warn("No product id found for {}", stack.getHoverName().getString());
                 return SlotClickResult.Pass;
             }
 
@@ -540,31 +533,90 @@ public final class ProductInfoProvider {
         }
     }
 
+    private class ProductIdCache {
+
+        private final WeakHashMap<ItemStack, Optional<String>> cache = new WeakHashMap<>();
+
+        ProductIdCache() {
+            log.debug("Initializing Product ID Cache");
+            ProductInfoProvider.this.bazaarData.addConversionListener(() -> {
+                log.trace(
+                    "Conversions updated, clearing product id cache with {} mappings",
+                    this.cache.size()
+                );
+
+                this.cache.clear();
+            });
+        }
+
+        Optional<String> get(ItemStack stack) {
+            var cached = this.cache.get(stack);
+            if (cached != null) {
+                return cached;
+            }
+
+            var name = stack.getHoverName().getString();
+
+            var direct = ProductInfoProvider.this.bazaarData.nameToId(name);
+            if (direct.isPresent()) {
+                this.cache.put(stack, direct);
+                return direct;
+            }
+
+            if ("Enchanted Book".equals(name)) {
+                var ids = OrderInfoParser
+                    .getLore(stack)
+                    .stream()
+                    .map(ProductInfoProvider.this.bazaarData::nameToId)
+                    .flatMap(Optional::stream)
+                    .distinct()
+                    .toList();
+
+                var result = ids.size() == 1 ? Optional.of(ids.getFirst()) : Optional.<String>empty();
+
+                this.cache.put(stack, result);
+                return result;
+            }
+
+            var delimiter = name.lastIndexOf(' ');
+            if (delimiter == -1 || !Utils.isValidRomanNumeral(name.substring(delimiter).trim())) {
+                this.cache.put(stack, Optional.empty());
+                return Optional.empty();
+            }
+
+            var result = ProductInfoProvider.this.bazaarData.nameToId(name.substring(0, delimiter).trim());
+
+            this.cache.put(stack, result);
+            return result;
+        }
+    }
+
     private class PriceCache {
 
         private final WeakHashMap<ItemStack, @Nullable CachedPrice> cache = new WeakHashMap<>();
 
         PriceCache() {
             log.debug("Initializing Price Cache");
-            ProductInfoProvider.this.bazaarData.addListener(products -> {
+            ProductInfoProvider.this.bazaarData.addBazaarListener(products -> {
                 log.trace(
                     "Bazaar data updated, clearing price cache with {} mappings",
                     this.cache.size()
                 );
 
-                cache.clear();
+                this.cache.clear();
             });
         }
 
         Optional<CachedPrice> get(ItemStack stack) {
-            if (cache.containsKey(stack)) {
-                return Optional.ofNullable(cache.get(stack));
+            var existing = this.cache.get(stack);
+            if (existing != null || this.cache.containsKey(stack)) {
+                return Optional.ofNullable(existing);
             }
-            var name = stack.getHoverName().getString();
-            var productId = resolveProductId(stack, name);
+
+            var productId = ProductInfoProvider.this.productIdCache.get(stack);
 
             if (productId.isEmpty()) {
-                cache.put(stack, null);
+                this.cache.put(stack, null);
                 return Optional.empty();
             }
 
@@ -574,11 +626,11 @@ public final class ProductInfoProvider {
             var buyOrderPrice = data.highestBuyPrice(productId.get()).orElse(null);
 
             var cached = new CachedPrice(sellOfferPrice, buyOrderPrice);
-            cache.put(stack, cached);
+            this.cache.put(stack, cached);
 
             log.trace(
                 "Cached price for '{}' (id: {}): buy={}, sell={}",
-                name,
+                stack.getHoverName().getString(),
                 productId.get(),
                 buyOrderPrice,
                 sellOfferPrice
