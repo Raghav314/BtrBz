@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.9.0-alpha] - 2026-07-12
+
+### Added
+
+- Added `/conversions` and `/conversion` commands for checking and refreshing Bazaar item data
+
+### Changed
+
+- Improved Bazaar item recognition across bookmarks, alerts, tracked orders, tooltips, and other Bazaar features
+- Significantly reduced memory usage while browsing Bazaar menus
+
+### Fixed
+
+- Fixed price alerts being saved unnecessarily and improved the reliability of reached alerts and reminders
+- Fixed Order Protection attempting to parse unrelated items without Bazaar order information
+- Fixed pricing and order information for enchanted books and other items with unusual Bazaar identifiers
+
+### Internal
+
+- Reworked Bazaar item handling to provide more reliable and consistent product matching ([LutzLuca/BtrBz#51](https://github.com/LutzLuca/BtrBz/pull/51))
+
+### Breaking
+
+- Bookmarks and price alerts will be reset because associated items are now stored in a new format
+
 ## [0.8.0-alpha] - 2026-06-26
 
 ### Added
