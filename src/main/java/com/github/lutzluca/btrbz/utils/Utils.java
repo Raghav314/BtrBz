@@ -194,12 +194,7 @@ public final class Utils {
             }
             //?} else {
             /*String serialized = color.serialize();
-            if (serialized.startsWith("#")) {
-                out.append("§x");
-                for (char c : serialized.substring(1).toCharArray()) {
-                    out.append('§').append(c);
-                }
-            } else {
+            if (!serialized.startsWith("#")) {
                 try {
                     out.append(ChatFormatting.valueOf(serialized.toUpperCase(ROOT)));
                 } catch (IllegalArgumentException ignored) {
