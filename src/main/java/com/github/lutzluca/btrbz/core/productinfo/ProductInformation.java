@@ -28,10 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -226,22 +224,30 @@ public final class ProductInformation {
     }
 
     private void confirmAndOpen(String link) {
-        GameUtils.setScreen(new ConfirmLinkScreen(
-            confirmed -> {
-                if (confirmed) {
-                    Try
-                        .run(() -> Util.getPlatform().openUri(new URI(link)))
-                        .onFailure(err -> Notifier.notifyPlayer(Component
-                            .literal("Failed to open link: ")
-                            .withStyle(ChatFormatting.RED)
-                            .append(Component
-                                .literal(link)
-                                .withStyle(UiStyles.action()))));
-                }
+        Try
+            .of(() -> new URI(link))
+            .onSuccess(uri -> GameUtils.setScreen(GameUtils.confirmLinkScreen(
+                confirmed -> {
+                    if (confirmed) {
+                        Try
+                            .run(() -> GameUtils.openUri(uri))
+                            .onFailure(err -> notifyOpenFailed(link));
+                    }
 
-                var prev = ScreenTracker.get().getPrevInfo();
-                GameUtils.setScreen(prev != null ? prev.getScreen() : null);
-            }, link, true));
+                    var prev = ScreenTracker.get().getPrevInfo();
+                    GameUtils.setScreen(prev.getScreen());
+                },
+                uri)))
+            .onFailure(err -> notifyOpenFailed(link));
+    }
+
+    private static void notifyOpenFailed(String link) {
+        Notifier.notifyPlayer(Component
+            .literal("Failed to open link: ")
+            .withStyle(ChatFormatting.RED)
+            .append(Component
+                .literal(link)
+                .withStyle(UiStyles.action())));
     }
 
     private record ProductLookup(

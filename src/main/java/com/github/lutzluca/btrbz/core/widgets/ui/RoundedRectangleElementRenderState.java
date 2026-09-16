@@ -1,7 +1,11 @@
 package com.github.lutzluca.btrbz.core.widgets.ui;
 
 import com.github.lutzluca.btrbz.core.widgets.WidgetMath;
+//? if >=26.3 {
+/*import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+*///?} else {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+//?}
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import io.wispforest.owo.ui.core.OwoUIPipelines;
 import net.minecraft.client.gui.navigation.ScreenRectangle;

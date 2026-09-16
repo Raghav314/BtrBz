@@ -4,6 +4,8 @@ import com.github.lutzluca.btrbz.core.ui.UiStyles;
 
 import com.github.lutzluca.btrbz.BtrBz;
 import com.github.lutzluca.btrbz.screen.ScreenTracker;
+import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -12,6 +14,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.Item;
@@ -28,6 +31,11 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerScoreEntry;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
+//? if <26.3 {
+import net.minecraft.util.Util;
+//?} else {
+/*import com.mojang.blaze3d.Blaze3D;
+*///?}
 import net.minecraft.client.gui.screens.inventory.SignEditScreen;
 import org.jetbrains.annotations.Nullable;
 import com.github.lutzluca.btrbz.core.trackedorders.TrackedOrderManager.OrderManagerConfig.QueueDisplayMode;
@@ -62,6 +70,22 @@ public final class GameUtils {
         Minecraft.getInstance().setScreen(screen);
         //?} else {
         /*Minecraft.getInstance().gui.setScreen(screen);
+        *///?}
+    }
+
+    public static ConfirmLinkScreen confirmLinkScreen(BooleanConsumer callback, URI uri) {
+        //? if <26.3 {
+        return new ConfirmLinkScreen(callback, uri.toString(), true);
+        //?} else {
+        /*return new ConfirmLinkScreen(callback, uri, true);
+        *///?}
+    }
+
+    public static void openUri(URI uri) {
+        //? if <26.3 {
+        Util.getPlatform().openUri(uri);
+        //?} else {
+        /*Blaze3D.openUri(uri);
         *///?}
     }
 
