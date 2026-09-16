@@ -30,7 +30,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Util;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -285,22 +284,22 @@ public final class ProductInformation {
     }
 
     private void confirmAndOpen(String link) {
-        GameUtils.setScreen(new ConfirmLinkScreen(
-            confirmed -> {
-                if (confirmed) {
-                    Try
-                        .run(() -> Util.getPlatform().openUri(new URI(link)))
-                        .onFailure(err -> Notifier.notifyPlayer(Component
-                            .literal("Failed to open link: ")
-                            .withStyle(ChatFormatting.RED)
-                            .append(Component
-                                .literal(link)
-                                .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BLUE))));
-                }
+        var parsed = Try.of(() -> new URI(link));
+        if (parsed.isFailure()) {
+            notifyLinkFailure(link);
+            return;
+        }
 
-                var prev = ScreenTracker.get().getPrevInfo();
-                GameUtils.setScreen(prev != null ? prev.getScreen() : null);
-            }, link, true));
+        ConfirmLinkScreen.confirmLinkNow(GameUtils.screen(), parsed.get(), true);
+    }
+
+    private static void notifyLinkFailure(String link) {
+        Notifier.notifyPlayer(Component
+            .literal("Failed to open link: ")
+            .withStyle(ChatFormatting.RED)
+            .append(Component
+                .literal(link)
+                .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BLUE)));
     }
 
     private ProductIdentity resolveProduct(ItemStack stack) {
