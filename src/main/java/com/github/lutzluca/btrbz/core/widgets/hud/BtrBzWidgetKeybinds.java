@@ -23,7 +23,11 @@ public final class BtrBzWidgetKeybinds {
     public static KeyMapping registerMapping() {
         return KeyMappingHelper.registerKeyMapping(new KeyMapping(
             "key.btrbz.toggle_bazaar_orders_hud",
+            //? if >=26.3 {
+            /*InputConstants.Type.KEYBOARD,
+             *///?} else {
             InputConstants.Type.KEYSYM,
+            //?}
             InputConstants.KEY_H,
             CATEGORY));
     }
